@@ -1,18 +1,16 @@
 # Flutter Playground
 
-Welcome to my Flutter Playground! 🚀
-
 This repository serves as a personal sandbox where I practice, experiment, and build various UI components, animations, and features in Flutter. The goal is to learn new concepts and create a personal library of reusable widgets.
 
-## 🗂️ Experiments & Components
+##  Experiments & Components
 
 Each experiment lives in its own dedicated folder with a specific `README.md` explaining how it works.
 
-- 🔍 **[Animated Search Bar](lib/AnimatedSearchBar/)** - An expandable, smooth, and interactive search bar utilizing `AnimatedContainer` and `CupertinoSearchTextField`.
+-  **[Animated Search Bar](lib/AnimatedSearchBar/)** - An expandable, smooth, and interactive search bar utilizing `AnimatedContainer` and `CupertinoSearchTextField`.
 
 ---
 
-## 🛠️ Getting Started
+##  Getting Started
 
 To run any of the experiments locally:
 
