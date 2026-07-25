@@ -1,26 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:playground/AnimatedSearchBar/search_bar.dart';
 import 'package:playground/SpringButton/micro_interactions.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      debugShowCheckedModeBanner: false,
-      home: const DemoPage(),
-    );
-  }
-}
+import 'package:playground/AnimatedSearchBar/search_bar.dart';
 
 class DemoPage extends StatelessWidget {
   const DemoPage({super.key});
