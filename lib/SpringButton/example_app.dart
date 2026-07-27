@@ -10,7 +10,7 @@ class DemoPage extends StatefulWidget {
 }
 
 class _DemoPageState extends State<DemoPage> {
-  final List<DragMenuItem> backMenuItems = [
+  late final List<DragMenuItem> backMenuItems = [
     DragMenuItem(
       label: 'Home',
       icon: const Icon(Icons.home_rounded),
@@ -24,7 +24,9 @@ class _DemoPageState extends State<DemoPage> {
     DragMenuItem(
       label: 'Search',
       icon: const Icon(Icons.search_rounded),
-      onSelected: () => debugPrint('Search selected'),
+      onSelected: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (context) => const TestScreen())),
     ),
     DragMenuItem(
       label: 'Close Chat',
