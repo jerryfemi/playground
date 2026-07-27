@@ -143,6 +143,83 @@ class _DemoPageState extends State<DemoPage> {
                 ],
               ),
             ),
+
+            // Bottom Input Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              color: Colors.white,
+              child: SafeArea(
+                top: false,
+                child: Row(
+                  children: [
+                    // ANOTHER STANDALONE SPRING BUTTON (Attachment)
+                    SpringButton(
+                      pressedScale: 0.8,
+                      dragFriction: 5.0,
+                      enableTapHaptics: true,
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Attachment tapped!')),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF0F1F5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.add_rounded,
+                          color: Colors.black87,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0F1F5),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: const Text(
+                          'Type a message...',
+                          style: TextStyle(color: Colors.black38),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // STANDALONE SPRING BUTTON (Send)
+                    SpringButton(
+                      pressedScale: 0.8,
+                      dragFriction: 5.0,
+                      enableTapHaptics: true,
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Send tapped! (Standalone SpringButton)')),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: const BoxDecoration(
+                          color: Colors.blueAccent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.send_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
