@@ -54,8 +54,8 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> {
 
     return AnimatedContainer(
       width: _expanded ? screenWidth : 44,
-      duration: Duration(milliseconds: 300),
-      curve: Curves.easeInOutCubic,
+      duration: Duration(milliseconds: 200),
+      curve: Curves.linear,
       child: CupertinoSearchTextField(
         controller: _controller,
         focusNode: _focusNode,

@@ -54,7 +54,8 @@ class DragMenuOverlay extends StatelessWidget {
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: BorderRadius.circular(borderRadius),
-              boxShadow: shadow ??
+              boxShadow:
+                  shadow ??
                   const [
                     BoxShadow(
                       color: Color(0x22000000),
@@ -98,8 +99,9 @@ class DragMenuOverlay extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: effectiveTextStyle?.copyWith(
-                            fontWeight:
-                                selected ? FontWeight.w600 : FontWeight.w500,
+                            fontWeight: selected
+                                ? FontWeight.w600
+                                : FontWeight.w500,
                             color: selected
                                 ? Theme.of(context).colorScheme.primary
                                 : effectiveTextStyle.color,

@@ -2,34 +2,39 @@ import 'package:flutter/material.dart';
 import 'package:playground/SpringButton/micro_interactions.dart';
 import 'package:playground/AnimatedSearchBar/search_bar.dart';
 
-class DemoPage extends StatelessWidget {
+class DemoPage extends StatefulWidget {
   const DemoPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final items = [
-      DragMenuItem(
-        label: 'Reply',
-        icon: const Icon(Icons.reply_rounded),
-        onSelected: () => debugPrint('Reply selected'),
-      ),
-      DragMenuItem(
-        label: 'Forward',
-        icon: const Icon(Icons.forward_rounded),
-        onSelected: () => debugPrint('Forward selected'),
-      ),
-      DragMenuItem(
-        label: 'Copy',
-        icon: const Icon(Icons.copy_rounded),
-        onSelected: () => debugPrint('Copy selected'),
-      ),
-      DragMenuItem(
-        label: 'Delete',
-        icon: const Icon(Icons.delete_outline_rounded),
-        onSelected: () => debugPrint('Delete selected'),
-      ),
-    ];
+  State<DemoPage> createState() => _DemoPageState();
+}
 
+class _DemoPageState extends State<DemoPage> {
+  final List<DragMenuItem> items = [
+    DragMenuItem(
+      label: 'Reply',
+      icon: const Icon(Icons.reply_rounded),
+      onSelected: () => debugPrint('Reply selected'),
+    ),
+    DragMenuItem(
+      label: 'Forward',
+      icon: const Icon(Icons.forward_rounded),
+      onSelected: () => debugPrint('Forward selected'),
+    ),
+    DragMenuItem(
+      label: 'Copy',
+      icon: const Icon(Icons.copy_rounded),
+      onSelected: () => debugPrint('Copy selected'),
+    ),
+    DragMenuItem(
+      label: 'Delete',
+      icon: const Icon(Icons.delete_outline_rounded),
+      onSelected: () => debugPrint('Delete selected'),
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Micro-interactions Demo'),

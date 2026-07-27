@@ -20,14 +20,14 @@ class DragMenu extends StatefulWidget {
     super.key,
     required this.child,
     required this.items,
-    this.itemHeight = 48,
-    this.menuWidth = 220,
+    this.itemHeight = 30,
+    this.menuWidth = 150,
     this.margin = 12,
     this.deadZone = 10,
     this.anchorGap = 8,
     this.highlightColor = const Color(0x14007AFF),
     this.backgroundColor = Colors.white,
-    this.borderRadius = 18,
+    this.borderRadius = 26,
     this.enableHaptics = true,
     this.initialIndex = 0,
   });
@@ -139,10 +139,10 @@ class _DragMenuState extends State<DragMenu> {
 
     _menuTop = _spawnUpward
         ? (details.globalPosition.dy - totalMenuHeight - widget.anchorGap)
-            .clamp(
-            widget.margin,
-            size.height - totalMenuHeight - widget.margin,
-          )
+              .clamp(
+                widget.margin,
+                size.height - totalMenuHeight - widget.margin,
+              )
         : (details.globalPosition.dy + widget.anchorGap).clamp(
             widget.margin,
             size.height - totalMenuHeight - widget.margin,
