@@ -28,6 +28,7 @@ class DragMenu extends StatefulWidget {
     this.highlightColor = const Color(0x14007AFF),
     this.backgroundColor = Colors.white,
     this.borderRadius = 26,
+    this.itemBorderRadius = 12,
     this.enableHaptics = true,
     this.initialIndex = 0,
   });
@@ -53,6 +54,7 @@ class DragMenu extends StatefulWidget {
   final Color highlightColor;
   final Color backgroundColor;
   final double borderRadius;
+  final double itemBorderRadius;
   final bool enableHaptics;
 
   /// Initial highlighted item when menu appears.
@@ -107,6 +109,7 @@ class _DragMenuState extends State<DragMenu> {
           backgroundColor: widget.backgroundColor,
           highlightColor: widget.highlightColor,
           borderRadius: widget.borderRadius,
+          itemBorderRadius: widget.itemBorderRadius,
         );
       },
     );
@@ -192,15 +195,8 @@ class _DragMenuState extends State<DragMenu> {
       }
     }
 
-    // Menu tracks the finger on Y axis while staying on screen.
-    final desiredTop = _spawnUpward
-        ? details.globalPosition.dy - _menuHeight - widget.anchorGap
-        : details.globalPosition.dy + widget.anchorGap;
-
-    _menuTop = desiredTop.clamp(
-      widget.margin,
-      size.height - _menuHeight - widget.margin,
-    );
+    // Menu stays stationary. We don't update _menuTop here anymore.
+    // _menuTop = desiredTop.clamp(...);
 
     _markNeedsBuild();
   }
