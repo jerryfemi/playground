@@ -141,30 +141,51 @@ class _DemoPageState extends State<DemoPage> {
   Widget _buildChatBubble(String text, {required bool isMe}) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isMe ? Colors.blueAccent : Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isMe ? 16 : 4),
-            bottomRight: Radius.circular(isMe ? 4 : 16),
+      child: DragMenu(
+        items: [
+          DragMenuItem(
+            label: 'Reply',
+            icon: const Icon(Icons.reply_rounded),
+            onSelected: () => debugPrint('Reply selected'),
           ),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 4,
-              offset: Offset(0, 2),
+          DragMenuItem(
+            label: 'Copy',
+            icon: const Icon(Icons.copy_rounded),
+            onSelected: () => debugPrint('Copy selected'),
+          ),
+          DragMenuItem(
+            label: 'Delete',
+            icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+            onSelected: () => debugPrint('Delete selected'),
+          ),
+        ],
+        itemHeight: 44,
+        menuWidth: 160,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isMe ? Colors.blueAccent : Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: Radius.circular(isMe ? 16 : 4),
+              bottomRight: Radius.circular(isMe ? 4 : 16),
             ),
-          ],
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 15,
-            color: isMe ? Colors.white : Colors.black87,
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 15,
+              color: isMe ? Colors.white : Colors.black87,
+            ),
           ),
         ),
       ),

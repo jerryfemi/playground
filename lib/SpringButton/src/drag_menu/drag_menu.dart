@@ -68,8 +68,11 @@ class _DragMenuState extends State<DragMenu> {
   OverlayEntry? _overlayEntry;
 
   int _hoveredIndex = -1;
+  bool _isLockedOpen = false;
+  bool _hasDragged = false;
 
   Offset? _pressGlobalPosition;
+  Rect? _childRect;
   bool _spawnUpward = false;
 
   double _menuLeft = 0;
@@ -88,8 +91,11 @@ class _DragMenuState extends State<DragMenu> {
   }
 
   void _removeOverlay() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
+    if (_overlayEntry != null) {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+      setState(() {}); // Re-show the original child
+    }
   }
 
   void _markNeedsBuild() {
@@ -110,18 +116,36 @@ class _DragMenuState extends State<DragMenu> {
           highlightColor: widget.highlightColor,
           borderRadius: widget.borderRadius,
           itemBorderRadius: widget.itemBorderRadius,
+          isLockedOpen: _isLockedOpen,
+          childReplica: widget.child,
+          childRect: _childRect,
+          onClose: () {
+            _removeOverlay();
+            _reset();
+          },
         );
       },
     );
 
     Overlay.of(context, rootOverlay: true).insert(_overlayEntry!);
+    setState(() {}); // Hide original child
   }
 
   void _handleLongPressStart(LongPressStartDetails details) {
     if (!mounted || widget.items.isEmpty) return;
 
     _pressGlobalPosition = details.globalPosition;
-    _hoveredIndex = widget.initialIndex.clamp(0, widget.items.length - 1);
+    _hoveredIndex = -1; // Start unhovered until they drag into the menu
+    _isLockedOpen = false;
+    _hasDragged = false;
+
+    // Get exact screen coordinates of the child for the iOS lift effect.
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox != null) {
+      final size = renderBox.size;
+      final position = renderBox.localToGlobal(Offset.zero);
+      _childRect = position & size;
+    }
 
     // Cache screen size once — it can't change mid-gesture.
     final media = MediaQuery.of(context);
@@ -129,24 +153,43 @@ class _DragMenuState extends State<DragMenu> {
     _cachedScreenSize = size;
 
     final totalMenuHeight = _menuHeight;
-    final spaceBelow = size.height - details.globalPosition.dy - widget.margin;
-    final spaceAbove = details.globalPosition.dy - widget.margin;
+    final childBottom = _childRect?.bottom ?? details.globalPosition.dy;
+    final childTop = _childRect?.top ?? details.globalPosition.dy;
+    
+    final spaceBelow = size.height - childBottom - widget.margin;
+    final spaceAbove = childTop - widget.margin;
 
     // If insufficient space below, prefer spawning upward.
     _spawnUpward = spaceBelow < totalMenuHeight && spaceAbove > spaceBelow;
 
-    _menuLeft = (details.globalPosition.dx + 12).clamp(
-      widget.margin,
-      size.width - widget.menuWidth - widget.margin,
-    );
+    if (_childRect != null) {
+      // If widget is mostly on the right side of the screen, right-align the menu
+      if (_childRect!.center.dx > size.width / 2) {
+        _menuLeft = (_childRect!.right - widget.menuWidth).clamp(
+          widget.margin,
+          size.width - widget.menuWidth - widget.margin,
+        );
+      } else {
+        // Otherwise left-align
+        _menuLeft = _childRect!.left.clamp(
+          widget.margin,
+          size.width - widget.menuWidth - widget.margin,
+        );
+      }
+    } else {
+      _menuLeft = (details.globalPosition.dx + 12).clamp(
+        widget.margin,
+        size.width - widget.menuWidth - widget.margin,
+      );
+    }
 
     _menuTop = _spawnUpward
-        ? (details.globalPosition.dy - totalMenuHeight - widget.anchorGap)
+        ? (childTop - totalMenuHeight - widget.anchorGap)
               .clamp(
                 widget.margin,
                 size.height - totalMenuHeight - widget.margin,
               )
-        : (details.globalPosition.dy + widget.anchorGap).clamp(
+        : (childBottom + widget.anchorGap).clamp(
             widget.margin,
             size.height - totalMenuHeight - widget.margin,
           );
@@ -175,6 +218,7 @@ class _DragMenuState extends State<DragMenu> {
       adjustedDy = 0;
     } else {
       adjustedDy = deltaY.sign * (deltaY.abs() - widget.deadZone);
+      _hasDragged = true;
     }
 
     // Hovered index is based on dy / itemHeight, floored.
@@ -202,12 +246,17 @@ class _DragMenuState extends State<DragMenu> {
   }
 
   void _handleLongPressEnd(LongPressEndDetails details) {
-    if (_hoveredIndex >= 0 && _hoveredIndex < widget.items.length) {
+    if (_hasDragged && _hoveredIndex >= 0 && _hoveredIndex < widget.items.length) {
+      // User dragged to an item and released. Execute it.
       widget.items[_hoveredIndex].onSelected();
+      _removeOverlay();
+      _reset();
+    } else {
+      // Didn't select anything via dragging, or just lifted finger. Lock it open!
+      _isLockedOpen = true;
+      _hoveredIndex = -1; // Clear highlight so it looks neutral
+      _markNeedsBuild();
     }
-
-    _removeOverlay();
-    _reset();
   }
 
   void _handleLongPressCancel() {
@@ -217,11 +266,15 @@ class _DragMenuState extends State<DragMenu> {
 
   void _reset() {
     _hoveredIndex = -1;
+    _isLockedOpen = false;
+    _hasDragged = false;
     _pressGlobalPosition = null;
+    _childRect = null;
     _spawnUpward = false;
     _menuLeft = 0;
     _menuTop = 0;
     _cachedScreenSize = null;
+    if (mounted) setState(() {});
   }
 
   @override
@@ -232,7 +285,10 @@ class _DragMenuState extends State<DragMenu> {
       onLongPressMoveUpdate: _handleLongPressMoveUpdate,
       onLongPressEnd: _handleLongPressEnd,
       onLongPressCancel: _handleLongPressCancel,
-      child: widget.child,
+      child: Opacity(
+        opacity: _overlayEntry != null ? 0.0 : 1.0,
+        child: widget.child,
+      ),
     );
   }
 }
