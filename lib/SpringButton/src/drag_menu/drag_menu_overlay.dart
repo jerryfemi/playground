@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:motor/motor.dart';
 
 /// Pure overlay UI for the drag menu.
 ///
 /// Important:
 /// - [IgnorePointer] is used so the overlay does not steal the gesture.
 /// - The original [GestureDetector] continues receiving long-press updates.
-class DragMenuOverlay extends StatelessWidget {
+class DragMenuOverlay extends StatefulWidget {
   const DragMenuOverlay({
     super.key,
     required this.left,
@@ -17,6 +18,7 @@ class DragMenuOverlay extends StatelessWidget {
     this.backgroundColor = Colors.white,
     this.highlightColor = const Color(0x14007AFF),
     this.borderRadius = 18,
+    this.itemBorderRadius = 12,
     this.shadow,
     this.padding = const EdgeInsets.all(8),
     this.textStyle,
@@ -32,86 +34,128 @@ class DragMenuOverlay extends StatelessWidget {
   final Color backgroundColor;
   final Color highlightColor;
   final double borderRadius;
+  final double itemBorderRadius;
   final List<BoxShadow>? shadow;
   final EdgeInsets padding;
   final TextStyle? textStyle;
 
   @override
+  State<DragMenuOverlay> createState() => _DragMenuOverlayState();
+}
+
+class _DragMenuOverlayState extends State<DragMenuOverlay> {
+  double _scale = 0.8;
+  double _opacity = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Trigger entrance animation on mount
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          _scale = 1.0;
+          _opacity = 1.0;
+        });
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final effectiveTextStyle =
-        textStyle ?? Theme.of(context).textTheme.bodyMedium;
+        widget.textStyle ?? Theme.of(context).textTheme.bodyMedium;
 
     return Positioned(
-      left: left,
-      top: top,
-      width: width,
+      left: widget.left,
+      top: widget.top,
+      width: widget.width,
       child: IgnorePointer(
         ignoring: true,
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(borderRadius),
-              boxShadow:
-                  shadow ??
-                  const [
-                    BoxShadow(
-                      color: Color(0x22000000),
-                      blurRadius: 18,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(items.length, (index) {
-                final item = items[index];
-                final selected = index == highlightedIndex;
-
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 70),
-                  curve: Curves.easeOut,
-                  height: itemHeight,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: selected ? highlightColor : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      if (item.icon != null) ...[
-                        IconTheme(
-                          data: IconThemeData(
-                            size: 20,
-                            color: selected
-                                ? Theme.of(context).colorScheme.primary
-                                : effectiveTextStyle?.color,
-                          ),
-                          child: item.icon!,
-                        ),
-                        const SizedBox(width: 10),
-                      ],
-                      Expanded(
-                        child: Text(
-                          item.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: effectiveTextStyle?.copyWith(
-                            fontWeight: selected
-                                ? FontWeight.w600
-                                : FontWeight.w500,
-                            color: selected
-                                ? Theme.of(context).colorScheme.primary
-                                : effectiveTextStyle.color,
-                          ),
-                        ),
+        child: SingleMotionBuilder(
+          motion: const CupertinoMotion.snappy(),
+          value: _scale,
+          builder: (context, scale, child) {
+            return Transform.scale(
+              scale: scale,
+              alignment: Alignment.center,
+              child: AnimatedOpacity(
+                opacity: _opacity,
+                duration: const Duration(milliseconds: 150),
+                child: child,
+              ),
+            );
+          },
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: widget.padding,
+              decoration: BoxDecoration(
+                color: widget.backgroundColor,
+                borderRadius: BorderRadius.circular(widget.borderRadius),
+                boxShadow:
+                    widget.shadow ??
+                    const [
+                      BoxShadow(
+                        color: Color(0x22000000),
+                        blurRadius: 18,
+                        offset: Offset(0, 8),
                       ),
                     ],
-                  ),
-                );
-              }),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(widget.items.length, (index) {
+                  final item = widget.items[index];
+                  final selected = index == widget.highlightedIndex;
+
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 70),
+                    curve: Curves.easeOut,
+                    height: widget.itemHeight,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? widget.highlightColor
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(
+                        widget.itemBorderRadius,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        if (item.icon != null) ...[
+                          IconTheme(
+                            data: IconThemeData(
+                              size: 20,
+                              color: selected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : effectiveTextStyle?.color,
+                            ),
+                            child: item.icon!,
+                          ),
+                          const SizedBox(width: 10),
+                        ],
+                        Expanded(
+                          child: Text(
+                            item.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: effectiveTextStyle?.copyWith(
+                              fontWeight: selected
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
+                              color: selected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : effectiveTextStyle.color,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ),
             ),
           ),
         ),
