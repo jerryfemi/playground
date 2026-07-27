@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:motor/motor.dart';
 
 /// Pure overlay UI for the drag menu.
@@ -54,6 +55,7 @@ class DragMenuOverlay extends StatefulWidget {
 class _DragMenuOverlayState extends State<DragMenuOverlay> {
   double _scale = 0.8;
   double _opacity = 0.0;
+  int _localHoveredIndex = -1;
 
   @override
   void initState() {
@@ -69,10 +71,32 @@ class _DragMenuOverlayState extends State<DragMenuOverlay> {
     });
   }
 
+  void _updateLocalHover(Offset localPosition) {
+    final dy = localPosition.dy - widget.padding.top;
+    int newIndex = -1;
+    if (dy >= 0 && localPosition.dx >= 0 && localPosition.dx <= widget.width) {
+      newIndex = (dy / widget.itemHeight).floor();
+      if (newIndex >= widget.items.length) {
+        newIndex = -1;
+      }
+    }
+
+    if (newIndex != _localHoveredIndex) {
+      setState(() => _localHoveredIndex = newIndex);
+      if (newIndex != -1) {
+        HapticFeedback.selectionClick();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final effectiveTextStyle =
         widget.textStyle ?? Theme.of(context).textTheme.bodyMedium;
+
+    final activeHoverIndex = widget.isLockedOpen
+        ? _localHoveredIndex
+        : widget.highlightedIndex;
 
     return Stack(
       children: [
@@ -119,98 +143,117 @@ class _DragMenuOverlayState extends State<DragMenuOverlay> {
           width: widget.width,
           child: IgnorePointer(
             ignoring: !widget.isLockedOpen,
-            child: SingleMotionBuilder(
-              motion: const CupertinoMotion.snappy(),
-              value: _scale,
-              builder: (context, scale, child) {
-                return Transform.scale(
-                  scale: scale,
-                  alignment: Alignment.center,
-                  child: AnimatedOpacity(
-                    opacity: _opacity,
-                    duration: const Duration(milliseconds: 150),
-                    child: child,
-                  ),
-                );
+            child: GestureDetector(
+              onPanDown: (details) => _updateLocalHover(details.localPosition),
+              onPanUpdate: (details) =>
+                  _updateLocalHover(details.localPosition),
+              onPanEnd: (details) {
+                if (_localHoveredIndex >= 0 &&
+                    _localHoveredIndex < widget.items.length) {
+                  widget.items[_localHoveredIndex].onSelected();
+                  widget.onClose();
+                } else {
+                  setState(() => _localHoveredIndex = -1);
+                }
               },
-              child: Material(
-                color: Colors.transparent,
-                child: Container(
-                  padding: widget.padding,
-                  decoration: BoxDecoration(
-                    color: widget.backgroundColor,
-                    borderRadius: BorderRadius.circular(widget.borderRadius),
-                    boxShadow:
-                        widget.shadow ??
-                        const [
-                          BoxShadow(
-                            color: Color(0x22000000),
-                            blurRadius: 18,
-                            offset: Offset(0, 8),
-                          ),
-                        ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(widget.items.length, (index) {
-                      final item = widget.items[index];
-                      final selected = index == widget.highlightedIndex;
+              onPanCancel: () => setState(() => _localHoveredIndex = -1),
+              child: SingleMotionBuilder(
+                motion: const CupertinoMotion.snappy(),
+                value: _scale,
+                builder: (context, scale, child) {
+                  return Transform.scale(
+                    scale: scale,
+                    alignment: Alignment.center,
+                    child: AnimatedOpacity(
+                      opacity: _opacity,
+                      duration: const Duration(milliseconds: 150),
+                      child: child,
+                    ),
+                  );
+                },
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    padding: widget.padding,
+                    decoration: BoxDecoration(
+                      color: widget.backgroundColor,
+                      borderRadius: BorderRadius.circular(widget.borderRadius),
+                      boxShadow:
+                          widget.shadow ??
+                          const [
+                            BoxShadow(
+                              color: Color(0x22000000),
+                              blurRadius: 18,
+                              offset: Offset(0, 8),
+                            ),
+                          ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(widget.items.length, (index) {
+                        final item = widget.items[index];
+                        final selected = index == activeHoverIndex;
 
-                      return GestureDetector(
-                        onTap: widget.isLockedOpen
-                            ? () {
-                                item.onSelected();
-                                widget.onClose();
-                              }
-                            : null,
-                        behavior: HitTestBehavior.opaque,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 70),
-                          curve: Curves.easeOut,
-                          height: widget.itemHeight,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: selected
-                                ? widget.highlightColor
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(
-                              widget.itemBorderRadius,
+                        return GestureDetector(
+                          onTap: widget.isLockedOpen
+                              ? () {
+                                  item.onSelected();
+                                  widget.onClose();
+                                }
+                              : null,
+                          behavior: HitTestBehavior.opaque,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 70),
+                            curve: Curves.easeOut,
+                            height: widget.itemHeight,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? widget.highlightColor
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(
+                                widget.itemBorderRadius,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                if (item.icon != null) ...[
+                                  IconTheme(
+                                    data: IconThemeData(
+                                      size: 20,
+                                      color: selected
+                                          ? Theme.of(
+                                              context,
+                                            ).colorScheme.primary
+                                          : effectiveTextStyle?.color,
+                                    ),
+                                    child: item.icon!,
+                                  ),
+                                  const SizedBox(width: 10),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    item.label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: effectiveTextStyle?.copyWith(
+                                      fontWeight: selected
+                                          ? FontWeight.w600
+                                          : FontWeight.w500,
+                                      color: selected
+                                          ? Theme.of(
+                                              context,
+                                            ).colorScheme.primary
+                                          : effectiveTextStyle.color,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              if (item.icon != null) ...[
-                                IconTheme(
-                                  data: IconThemeData(
-                                    size: 20,
-                                    color: selected
-                                        ? Theme.of(context).colorScheme.primary
-                                        : effectiveTextStyle?.color,
-                                  ),
-                                  child: item.icon!,
-                                ),
-                                const SizedBox(width: 10),
-                              ],
-                              Expanded(
-                                child: Text(
-                                  item.label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: effectiveTextStyle?.copyWith(
-                                    fontWeight: selected
-                                        ? FontWeight.w600
-                                        : FontWeight.w500,
-                                    color: selected
-                                        ? Theme.of(context).colorScheme.primary
-                                        : effectiveTextStyle.color,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }),
+                        );
+                      }),
+                    ),
                   ),
                 ),
               ),

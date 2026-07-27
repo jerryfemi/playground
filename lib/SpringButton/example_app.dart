@@ -49,8 +49,10 @@ class _DemoPageState extends State<DemoPage> {
                   // The DragMenu and SpringButton back button
                   DragMenu(
                     items: backMenuItems,
-                    itemHeight: 44,
+                    itemHeight: 40,
                     menuWidth: 180,
+                    borderRadius: 16,
+                    itemBorderRadius: 16,
                     deadZone: 10,
                     child: SpringButton(
                       pressedScale: 0.85,
@@ -80,7 +82,13 @@ class _DemoPageState extends State<DemoPage> {
                   const CircleAvatar(
                     radius: 20,
                     backgroundColor: Colors.blueAccent,
-                    child: Text('JD', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    child: Text(
+                      'JD',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
@@ -114,21 +122,24 @@ class _DemoPageState extends State<DemoPage> {
                 ],
               ),
             ),
-            
+
             // Divider
-            Container(
-              height: 1,
-              color: Colors.black.withOpacity(0.05),
-            ),
+            Container(height: 1, color: Colors.black.withOpacity(0.05)),
 
             // Mock Chat Body
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  _buildChatBubble('Hey! Are we still on for tomorrow?', isMe: false),
+                  _buildChatBubble(
+                    'Hey! Are we still on for tomorrow?',
+                    isMe: false,
+                  ),
                   _buildChatBubble('Yes! See you at 10 AM.', isMe: true),
-                  _buildChatBubble('Long press the back button in the header to see the new context menu in action!', isMe: false),
+                  _buildChatBubble(
+                    'Long press the back button in the header to see the new context menu in action!',
+                    isMe: false,
+                  ),
                 ],
               ),
             ),
@@ -159,8 +170,8 @@ class _DemoPageState extends State<DemoPage> {
             onSelected: () => debugPrint('Delete selected'),
           ),
         ],
-        itemHeight: 44,
         menuWidth: 160,
+
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

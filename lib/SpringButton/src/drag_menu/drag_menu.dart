@@ -20,7 +20,7 @@ class DragMenu extends StatefulWidget {
     super.key,
     required this.child,
     required this.items,
-    this.itemHeight = 30,
+    this.itemHeight = 35,
     this.menuWidth = 150,
     this.margin = 12,
     this.deadZone = 10,
@@ -28,7 +28,7 @@ class DragMenu extends StatefulWidget {
     this.highlightColor = const Color(0x14007AFF),
     this.backgroundColor = Colors.white,
     this.borderRadius = 26,
-    this.itemBorderRadius = 12,
+    this.itemBorderRadius = 26,
     this.enableHaptics = true,
     this.initialIndex = 0,
   });
@@ -69,7 +69,6 @@ class _DragMenuState extends State<DragMenu> {
 
   int _hoveredIndex = -1;
   bool _isLockedOpen = false;
-  bool _hasDragged = false;
 
   Offset? _pressGlobalPosition;
   Rect? _childRect;
@@ -135,9 +134,8 @@ class _DragMenuState extends State<DragMenu> {
     if (!mounted || widget.items.isEmpty) return;
 
     _pressGlobalPosition = details.globalPosition;
-    _hoveredIndex = -1; // Start unhovered until they drag into the menu
+    _hoveredIndex = -1; // Start unhovered until they drag into the menu bounds
     _isLockedOpen = false;
-    _hasDragged = false;
 
     // Get exact screen coordinates of the child for the iOS lift effect.
     final renderBox = context.findRenderObject() as RenderBox?;
@@ -155,7 +153,7 @@ class _DragMenuState extends State<DragMenu> {
     final totalMenuHeight = _menuHeight;
     final childBottom = _childRect?.bottom ?? details.globalPosition.dy;
     final childTop = _childRect?.top ?? details.globalPosition.dy;
-    
+
     final spaceBelow = size.height - childBottom - widget.margin;
     final spaceAbove = childTop - widget.margin;
 
@@ -184,11 +182,10 @@ class _DragMenuState extends State<DragMenu> {
     }
 
     _menuTop = _spawnUpward
-        ? (childTop - totalMenuHeight - widget.anchorGap)
-              .clamp(
-                widget.margin,
-                size.height - totalMenuHeight - widget.margin,
-              )
+        ? (childTop - totalMenuHeight - widget.anchorGap).clamp(
+            widget.margin,
+            size.height - totalMenuHeight - widget.margin,
+          )
         : (childBottom + widget.anchorGap).clamp(
             widget.margin,
             size.height - totalMenuHeight - widget.margin,
@@ -207,47 +204,42 @@ class _DragMenuState extends State<DragMenu> {
     if (_overlayEntry == null || _pressGlobalPosition == null) return;
     if (widget.items.isEmpty) return;
 
-    final size = _cachedScreenSize!;
+    final index = _getHoveredIndex(details.globalPosition);
 
-    // We use the finger's movement relative to the original press point.
-    final deltaY = details.globalPosition.dy - _pressGlobalPosition!.dy;
-
-    // Dead zone: tiny wiggles do not immediately change item.
-    double adjustedDy;
-    if (deltaY.abs() <= widget.deadZone) {
-      adjustedDy = 0;
-    } else {
-      adjustedDy = deltaY.sign * (deltaY.abs() - widget.deadZone);
-      _hasDragged = true;
-    }
-
-    // Hovered index is based on dy / itemHeight, floored.
-    final stepped = (adjustedDy / widget.itemHeight).floor();
-
-    // If menu spawns upward, dragging upward should move deeper into the list.
-    // If it spawns downward, dragging downward should move deeper into the list.
-    final nextIndex = _spawnUpward
-        ? (widget.initialIndex - stepped)
-        : (widget.initialIndex + stepped);
-
-    final clampedIndex = nextIndex.clamp(0, widget.items.length - 1);
-
-    if (clampedIndex != _hoveredIndex) {
-      _hoveredIndex = clampedIndex;
-      if (widget.enableHaptics) {
+    if (index != _hoveredIndex) {
+      _hoveredIndex = index;
+      if (_hoveredIndex != -1 && widget.enableHaptics) {
         HapticFeedback.selectionClick();
       }
+      _markNeedsBuild();
+    }
+  }
+
+  int _getHoveredIndex(Offset globalPos) {
+    // 1. Check if X is within the menu horizontally (with a tiny bit of horizontal forgiveness)
+    final dx = globalPos.dx;
+    if (dx < _menuLeft - 20 || dx > _menuLeft + widget.menuWidth + 20) {
+      return -1;
     }
 
-    // Menu stays stationary. We don't update _menuTop here anymore.
-    // _menuTop = desiredTop.clamp(...);
+    // 2. Check if Y intersects a specific item.
+    // The menu container has 8px padding top and bottom (assumed from DragMenuOverlay).
+    final localY = globalPos.dy - _menuTop - 8;
 
-    _markNeedsBuild();
+    // If we are above the first item or below the last item
+    if (localY < 0) return -1;
+
+    final index = (localY / widget.itemHeight).floor();
+    if (index >= 0 && index < widget.items.length) {
+      return index;
+    }
+
+    return -1;
   }
 
   void _handleLongPressEnd(LongPressEndDetails details) {
-    if (_hasDragged && _hoveredIndex >= 0 && _hoveredIndex < widget.items.length) {
-      // User dragged to an item and released. Execute it.
+    if (_hoveredIndex >= 0 && _hoveredIndex < widget.items.length) {
+      // User dragged over an item and released. Execute it.
       widget.items[_hoveredIndex].onSelected();
       _removeOverlay();
       _reset();
@@ -267,7 +259,6 @@ class _DragMenuState extends State<DragMenu> {
   void _reset() {
     _hoveredIndex = -1;
     _isLockedOpen = false;
-    _hasDragged = false;
     _pressGlobalPosition = null;
     _childRect = null;
     _spawnUpward = false;
