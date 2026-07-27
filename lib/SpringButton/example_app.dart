@@ -59,9 +59,7 @@ class _DemoPageState extends State<DemoPage> {
                       dragFriction: 4.0, // tighter rubber band
                       enableTapHaptics: true,
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Back button tapped!')),
-                        );
+                        // Action for back button
                       },
                       child: Container(
                         padding: const EdgeInsets.all(12),
@@ -158,9 +156,7 @@ class _DemoPageState extends State<DemoPage> {
                       dragFriction: 5.0,
                       enableTapHaptics: true,
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Attachment tapped!')),
-                        );
+                        // Action for attachment
                       },
                       child: Container(
                         padding: const EdgeInsets.all(10),
@@ -199,9 +195,7 @@ class _DemoPageState extends State<DemoPage> {
                       dragFriction: 5.0,
                       enableTapHaptics: true,
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Send tapped! (Standalone SpringButton)')),
-                        );
+                        // Action for send
                       },
                       child: Container(
                         padding: const EdgeInsets.all(12),
