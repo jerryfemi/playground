@@ -73,6 +73,9 @@ class _SpringButtonState extends State<SpringButton> {
   /// Current target translation for MotionBuilder.
   Offset _targetOffset = Offset.zero;
 
+  /// The raw unconstrained drag distance, used to calculate the rubber-band effect.
+  Offset _rawTranslation = Offset.zero;
+
   /// Current target scale for SingleMotionBuilder.
   double _targetScale = 1.0;
 
@@ -127,20 +130,18 @@ class _SpringButtonState extends State<SpringButton> {
     if (!_pointerDown) return;
 
     final friction = widget.dragFriction <= 0 ? 1.0 : widget.dragFriction;
+    _rawTranslation += details.delta;
 
-    // Apply friction math: move only a fraction of the finger delta.
-    final dx = details.delta.dx / friction;
-    final dy = details.delta.dy / friction;
+    // Classic rubber-band formula: c * (1 - (1 / ((x * 0.55 / c) + 1)))
+    double rubberBand(double distance, double limit) {
+      if (distance == 0 || limit == 0) return 0;
+      final absDist = distance.abs();
+      return (1.0 - (1.0 / ((absDist * 0.55 / limit) + 1.0))) * limit * distance.sign;
+    }
 
     final next = Offset(
-      (_targetOffset.dx + dx).clamp(
-        -widget.maxTranslation.dx,
-        widget.maxTranslation.dx,
-      ),
-      (_targetOffset.dy + dy).clamp(
-        -widget.maxTranslation.dy,
-        widget.maxTranslation.dy,
-      ),
+      rubberBand(_rawTranslation.dx / friction, widget.maxTranslation.dx),
+      rubberBand(_rawTranslation.dy / friction, widget.maxTranslation.dy),
     );
 
     _accumulatedDragDistance += details.delta.distance;
@@ -175,6 +176,7 @@ class _SpringButtonState extends State<SpringButton> {
 
   void _resetToRest() {
     setState(() {
+      _rawTranslation = Offset.zero;
       _targetOffset = Offset.zero;
       _targetScale = 1.0;
     });
