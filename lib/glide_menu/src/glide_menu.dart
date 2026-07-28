@@ -35,7 +35,8 @@ class GlideMenu<T> extends StatefulWidget {
     this.itemBorderRadius = 24,
     this.enableHaptics = true,
     this.initialIndex = 0,
-  });
+  }) : assert(items.length > 0 || footer != null,
+           'GlideMenu requires at least one item or a footer.');
 
   /// The widget that the user long-presses to open the menu.
   final Widget child;
@@ -106,6 +107,13 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
       h += widget.itemHeight + 17; // itemHeight + 1px divider + 16px padding
     }
     return h;
+  }
+
+  /// Clamps [value] between [min] and [max], gracefully handling
+  /// the case where max < min (e.g. menu wider than screen).
+  double _safeClamp(double value, double min, double max) {
+    if (max < min) return min; // Menu doesn't fit; pin to the edge
+    return value.clamp(min, max);
   }
 
   @override
@@ -187,49 +195,63 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
       _childRect = position & size;
     }
 
-    // Fetch screen size once — it can't change mid-gesture.
+    // Fetch screen metrics once — accounting for safe areas and keyboard.
     final media = MediaQuery.of(context);
-    final size = media.size;
+    final safePadding = media.padding; // notch, status bar, gesture bar
+    final keyboardHeight = media.viewInsets.bottom;
+
+    final screenWidth = media.size.width;
+    final screenHeight = media.size.height;
+
+    final safeTop = safePadding.top;
+    final safeBottom = safePadding.bottom + keyboardHeight;
+    final safeLeft = safePadding.left;
+    final safeRight = safePadding.right;
 
     final totalMenuHeight = _menuHeight;
     final childBottom = _childRect?.bottom ?? details.globalPosition.dy;
     final childTop = _childRect?.top ?? details.globalPosition.dy;
 
-    final spaceBelow = size.height - childBottom - widget.margin;
-    final spaceAbove = childTop - widget.margin;
+    final spaceBelow = screenHeight - childBottom - widget.margin - safeBottom;
+    final spaceAbove = childTop - widget.margin - safeTop;
 
     // If insufficient space below, prefer spawning upward.
     _spawnUpward = spaceBelow < totalMenuHeight && spaceAbove > spaceBelow;
 
     if (_childRect != null) {
       // If widget is mostly on the right side of the screen, right-align the menu
-      if (_childRect!.center.dx > size.width / 2) {
-        _menuLeft = (_childRect!.right - widget.menuWidth).clamp(
-          widget.margin,
-          size.width - widget.menuWidth - widget.margin,
+      if (_childRect!.center.dx > screenWidth / 2) {
+        _menuLeft = _safeClamp(
+          _childRect!.right - widget.menuWidth,
+          widget.margin + safeLeft,
+          screenWidth - widget.menuWidth - widget.margin - safeRight,
         );
       } else {
         // Otherwise left-align
-        _menuLeft = _childRect!.left.clamp(
-          widget.margin,
-          size.width - widget.menuWidth - widget.margin,
+        _menuLeft = _safeClamp(
+          _childRect!.left,
+          widget.margin + safeLeft,
+          screenWidth - widget.menuWidth - widget.margin - safeRight,
         );
       }
     } else {
-      _menuLeft = (details.globalPosition.dx + 12).clamp(
-        widget.margin,
-        size.width - widget.menuWidth - widget.margin,
+      _menuLeft = _safeClamp(
+        details.globalPosition.dx + 12,
+        widget.margin + safeLeft,
+        screenWidth - widget.menuWidth - widget.margin - safeRight,
       );
     }
 
     _menuTop = _spawnUpward
-        ? (childTop - totalMenuHeight - widget.anchorGap).clamp(
-            widget.margin,
-            size.height - totalMenuHeight - widget.margin,
+        ? _safeClamp(
+            childTop - totalMenuHeight - widget.anchorGap,
+            widget.margin + safeTop,
+            screenHeight - totalMenuHeight - widget.margin - safeBottom,
           )
-        : (childBottom + widget.anchorGap).clamp(
-            widget.margin,
-            size.height - totalMenuHeight - widget.margin,
+        : _safeClamp(
+            childBottom + widget.anchorGap,
+            widget.margin + safeTop,
+            screenHeight - totalMenuHeight - widget.margin - safeBottom,
           );
 
     _showOverlay();
