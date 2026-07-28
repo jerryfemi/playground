@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:motor/motor.dart';
 
 import 'glide_menu_item.dart';
+import 'glide_hit_test.dart';
 
 /// Pure overlay UI for the drag menu.
 ///
@@ -92,23 +93,14 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
   }
 
   void _updateLocalHover(Offset localPosition) {
-    final dy = localPosition.dy - widget.padding.top;
-    int newIndex = -1;
-
-    // We account for the divider height (1px + 16px padding = 17px) when calculating footer intersection
-    if (dy >= 0 && localPosition.dx >= 0 && localPosition.dx <= widget.width) {
-      if (widget.footer != null &&
-          dy > (widget.items.length * widget.itemHeight)) {
-        if (dy > (widget.items.length * widget.itemHeight) + 17) {
-          newIndex = widget.items.length;
-        }
-      } else {
-        newIndex = (dy / widget.itemHeight).floor();
-        if (newIndex >= widget.items.length) {
-          newIndex = -1;
-        }
-      }
-    }
+    final newIndex = GlideHitTest.indexFromLocal(
+      localPosition: localPosition,
+      menuWidth: widget.width,
+      paddingTop: widget.padding.top,
+      itemHeight: widget.itemHeight,
+      itemCount: widget.items.length,
+      hasFooter: widget.footer != null,
+    );
 
     if (newIndex != _localHoveredIndex) {
       setState(() => _localHoveredIndex = newIndex);

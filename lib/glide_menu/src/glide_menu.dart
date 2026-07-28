@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 
 import 'glide_menu_overlay.dart';
 import 'glide_menu_item.dart';
+import 'glide_hit_test.dart';
 
 export 'glide_menu_overlay.dart';
 export 'glide_menu_item.dart';
+export 'glide_hit_test.dart';
 
 /// Continuous drag menu with spring-like interaction.
 ///
@@ -101,13 +103,11 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   double _menuLeft = 0;
   double _menuTop = 0;
 
-  double get _menuHeight {
-    double h = widget.items.length * widget.itemHeight + 16;
-    if (widget.footer != null) {
-      h += widget.itemHeight + 17; // itemHeight + 1px divider + 16px padding
-    }
-    return h;
-  }
+  double get _menuHeight => GlideHitTest.menuHeight(
+    itemCount: widget.items.length,
+    itemHeight: widget.itemHeight,
+    hasFooter: widget.footer != null,
+  );
 
   /// Clamps [value] between [min] and [max], gracefully handling
   /// the case where max < min (e.g. menu wider than screen).
@@ -279,30 +279,15 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   }
 
   int _getHoveredIndex(Offset globalPos) {
-    // 1. Check if X is within the menu horizontally (with a tiny bit of horizontal forgiveness)
-    final dx = globalPos.dx;
-    if (dx < _menuLeft - 20 || dx > _menuLeft + widget.menuWidth + 20) {
-      return -1;
-    }
-
-    // 2. Check if Y intersects a specific item.
-    // The menu container has 8px padding top and bottom (assumed from DragMenuOverlay).
-    final localY = globalPos.dy - _menuTop - 8;
-
-    // If we are above the first item or below the last item
-    if (localY < 0) return -1;
-
-    if (widget.footer != null &&
-        localY > (widget.items.length * widget.itemHeight) + 17) {
-      return widget.items.length; // footer index
-    }
-
-    final index = (localY / widget.itemHeight).floor();
-    if (index >= 0 && index < widget.items.length) {
-      return index;
-    }
-
-    return -1;
+    return GlideHitTest.indexFromGlobal(
+      globalPosition: globalPos,
+      menuLeft: _menuLeft,
+      menuTop: _menuTop,
+      menuWidth: widget.menuWidth,
+      itemHeight: widget.itemHeight,
+      itemCount: widget.items.length,
+      hasFooter: widget.footer != null,
+    );
   }
 
   void _handleLongPressEnd(LongPressEndDetails details) {
