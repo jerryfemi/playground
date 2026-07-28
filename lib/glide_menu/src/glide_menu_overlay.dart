@@ -148,7 +148,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
             width: widget.childRect!.width,
             height: widget.childRect!.height,
             child: SingleMotionBuilder(
-              motion: const CupertinoMotion.bouncy(extraBounce: 0.3),
+              motion: const CupertinoMotion.bouncy(extraBounce: 0.25),
               value: _scale > 0.8 ? 1.05 : 1.0, // Scale up slightly to "lift"
               builder: (context, scale, child) {
                 return Transform.scale(
@@ -193,7 +193,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
               },
               onPanCancel: () => setState(() => _localHoveredIndex = -1),
               child: SingleMotionBuilder(
-                motion: const CupertinoMotion.bouncy(extraBounce: 0.3),
+                motion: const CupertinoMotion.bouncy(extraBounce: 0.25),
                 value: _scale,
                 builder: (context, scale, child) {
                   // If the menu is rendered ABOVE the child, it should spring up from its bottom.
