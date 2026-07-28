@@ -77,7 +77,7 @@ class _DemoPageState extends State<DemoPage> {
         ],
         footer: const GlideMenuItem<String>(
           value: 'delete',
-          label: 'Delete Message',
+          label: 'Delete',
           icon: Icon(Icons.delete_outline_rounded, color: Colors.red),
           isDestructive: true,
         ),

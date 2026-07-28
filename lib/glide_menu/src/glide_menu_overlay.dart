@@ -123,9 +123,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
     final resolvedBackgroundColor =
         widget.backgroundColor ?? Theme.of(context).colorScheme.surface;
 
-    final activeHoverIndex = widget.isLockedOpen
-        ? _localHoveredIndex
-        : widget.highlightedIndex;
+    final activeHoverIndex =
+        widget.isLockedOpen ? _localHoveredIndex : widget.highlightedIndex;
 
     return Stack(
       children: [
@@ -149,7 +148,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
             width: widget.childRect!.width,
             height: widget.childRect!.height,
             child: SingleMotionBuilder(
-              motion: const CupertinoMotion.snappy(),
+              motion: const CupertinoMotion.bouncy(extraBounce: 0.3),
               value: _scale > 0.8 ? 1.05 : 1.0, // Scale up slightly to "lift"
               builder: (context, scale, child) {
                 return Transform.scale(
@@ -194,8 +193,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
               },
               onPanCancel: () => setState(() => _localHoveredIndex = -1),
               child: SingleMotionBuilder(
-                // Use a custom spring motion that matches iOS's bouncy menu entrance
-                motion: const CupertinoMotion.bouncy(extraBounce: 0.15),
+                motion: const CupertinoMotion.bouncy(extraBounce: 0.3),
                 value: _scale,
                 builder: (context, scale, child) {
                   // If the menu is rendered ABOVE the child, it should spring up from its bottom.
@@ -222,8 +220,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                     decoration: BoxDecoration(
                       color: resolvedBackgroundColor,
                       borderRadius: BorderRadius.circular(widget.borderRadius),
-                      boxShadow:
-                          widget.shadow ??
+                      boxShadow: widget.shadow ??
                           const [
                             BoxShadow(
                               color: Color(0x22000000),
@@ -242,7 +239,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                           return _buildMenuItem(item, selected);
                         }),
                         if (widget.footer != null) ...[
-                          const Divider(height: 17, indent: 10, endIndent: 10),
+                          const Divider(height: 17, indent: 6, endIndent: 6),
                           _buildMenuItem(
                             widget.footer!,
                             activeHoverIndex == widget.items.length,
@@ -267,8 +264,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
     final color = item.isDestructive
         ? Colors.redAccent
         : (selected ? primaryColor : effectiveTextStyle?.color);
-    final resolvedHighlightColor =
-        widget.highlightColor ??
+    final resolvedHighlightColor = widget.highlightColor ??
         Theme.of(context).colorScheme.primary.withValues(alpha: 0.08);
 
     return GestureDetector(
@@ -287,13 +283,12 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
         decoration: BoxDecoration(
           color: selected
               ? (item.isDestructive
-                    ? Colors.redAccent.withValues(alpha: 0.1)
-                    : resolvedHighlightColor)
+                  ? Colors.redAccent.withValues(alpha: 0.1)
+                  : resolvedHighlightColor)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(widget.itemBorderRadius),
         ),
-        child:
-            item.child ??
+        child: item.child ??
             Row(
               children: [
                 if (item.icon != null) ...[

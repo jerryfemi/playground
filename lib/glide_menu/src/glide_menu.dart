@@ -25,7 +25,7 @@ class GlideMenu<T> extends StatefulWidget {
     required this.onSelected,
     this.footer,
     this.itemHeight = 35,
-    this.menuWidth = 150,
+    this.menuWidth = 180,
     this.margin = 12,
     this.deadZone = 10,
     this.anchorGap = 8,
