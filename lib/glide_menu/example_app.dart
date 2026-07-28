@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:playground/SpringButton/micro_interactions.dart';
+import 'package:playground/glide_menu/glide_menu.dart';
 import 'package:playground/AnimatedSearchBar/search_bar.dart';
 
 class DemoPage extends StatefulWidget {
@@ -244,12 +244,13 @@ class _DemoPageState extends State<DemoPage> {
             label: 'Copy',
             icon: Icon(Icons.copy_rounded),
           ),
-          GlideMenuItem<String>(
-            value: 'delete',
-            label: 'Delete',
-            icon: Icon(Icons.delete_outline_rounded, color: Colors.red),
-          ),
         ],
+        footer: const GlideMenuItem<String>(
+          value: 'delete',
+          label: 'Delete',
+          icon: Icon(Icons.delete_outline_rounded, color: Colors.red),
+          isDestructive: true,
+        ),
         onSelected: (value) => debugPrint('$value selected on bubble'),
         menuWidth: 160,
 

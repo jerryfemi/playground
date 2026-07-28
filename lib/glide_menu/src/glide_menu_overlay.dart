@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:motor/motor.dart';
 
+import 'glide_menu_item.dart';
+
 /// Pure overlay UI for the drag menu.
 ///
 /// Important:
@@ -15,6 +17,7 @@ class GlideMenuOverlay<T> extends StatefulWidget {
     required this.width,
     required this.itemHeight,
     required this.items,
+    this.footer,
     required this.highlightedIndex,
     required this.isLockedOpen,
     required this.isClosing,
@@ -22,8 +25,8 @@ class GlideMenuOverlay<T> extends StatefulWidget {
     required this.onClose,
     this.childReplica,
     this.childRect,
-    this.backgroundColor = Colors.white,
-    this.highlightColor = const Color(0x14007AFF),
+    this.backgroundColor,
+    this.highlightColor,
     this.borderRadius = 18,
     this.itemBorderRadius = 12,
     this.shadow,
@@ -36,6 +39,7 @@ class GlideMenuOverlay<T> extends StatefulWidget {
   final double width;
   final double itemHeight;
   final List<GlideMenuItem<T>> items;
+  final GlideMenuItem<T>? footer;
   final int highlightedIndex;
   final bool isLockedOpen;
   final bool isClosing;
@@ -44,8 +48,8 @@ class GlideMenuOverlay<T> extends StatefulWidget {
   final Widget? childReplica;
   final Rect? childRect;
 
-  final Color backgroundColor;
-  final Color highlightColor;
+  final Color? backgroundColor;
+  final Color? highlightColor;
   final double borderRadius;
   final double itemBorderRadius;
   final List<BoxShadow>? shadow;
@@ -90,10 +94,19 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
   void _updateLocalHover(Offset localPosition) {
     final dy = localPosition.dy - widget.padding.top;
     int newIndex = -1;
+
+    // We account for the divider height (1px + 16px padding = 17px) when calculating footer intersection
     if (dy >= 0 && localPosition.dx >= 0 && localPosition.dx <= widget.width) {
-      newIndex = (dy / widget.itemHeight).floor();
-      if (newIndex >= widget.items.length) {
-        newIndex = -1;
+      if (widget.footer != null &&
+          dy > (widget.items.length * widget.itemHeight)) {
+        if (dy > (widget.items.length * widget.itemHeight) + 17) {
+          newIndex = widget.items.length;
+        }
+      } else {
+        newIndex = (dy / widget.itemHeight).floor();
+        if (newIndex >= widget.items.length) {
+          newIndex = -1;
+        }
       }
     }
 
@@ -107,8 +120,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveTextStyle =
-        widget.textStyle ?? Theme.of(context).textTheme.bodyMedium;
+    final resolvedBackgroundColor =
+        widget.backgroundColor ?? Theme.of(context).colorScheme.surface;
 
     final activeHoverIndex = widget.isLockedOpen
         ? _localHoveredIndex
@@ -164,9 +177,16 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
               onPanUpdate: (details) =>
                   _updateLocalHover(details.localPosition),
               onPanEnd: (details) {
+                final totalItems =
+                    widget.items.length + (widget.footer != null ? 1 : 0);
                 if (_localHoveredIndex >= 0 &&
-                    _localHoveredIndex < widget.items.length) {
-                  widget.onSelected(widget.items[_localHoveredIndex].value);
+                    _localHoveredIndex < totalItems) {
+                  if (_localHoveredIndex == widget.items.length &&
+                      widget.footer != null) {
+                    widget.onSelected(widget.footer!.value);
+                  } else {
+                    widget.onSelected(widget.items[_localHoveredIndex].value);
+                  }
                   widget.onClose();
                 } else {
                   setState(() => _localHoveredIndex = -1);
@@ -192,7 +212,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                   child: Container(
                     padding: widget.padding,
                     decoration: BoxDecoration(
-                      color: widget.backgroundColor,
+                      color: resolvedBackgroundColor,
                       borderRadius: BorderRadius.circular(widget.borderRadius),
                       boxShadow:
                           widget.shadow ??
@@ -206,69 +226,21 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      children: List.generate(widget.items.length, (index) {
-                        final item = widget.items[index];
-                        final selected = index == activeHoverIndex;
-
-                        return GestureDetector(
-                          onTap: widget.isLockedOpen
-                              ? () {
-                                  widget.onSelected(item.value);
-                                  widget.onClose();
-                                }
-                              : null,
-                          behavior: HitTestBehavior.opaque,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 70),
-                            curve: Curves.easeOut,
-                            height: widget.itemHeight,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? widget.highlightColor
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(
-                                widget.itemBorderRadius,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                if (item.icon != null) ...[
-                                  IconTheme(
-                                    data: IconThemeData(
-                                      size: 20,
-                                      color: selected
-                                          ? Theme.of(
-                                              context,
-                                            ).colorScheme.primary
-                                          : effectiveTextStyle?.color,
-                                    ),
-                                    child: item.icon!,
-                                  ),
-                                  const SizedBox(width: 10),
-                                ],
-                                Expanded(
-                                  child: Text(
-                                    item.label,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: effectiveTextStyle?.copyWith(
-                                      fontWeight: selected
-                                          ? FontWeight.w600
-                                          : FontWeight.w500,
-                                      color: selected
-                                          ? Theme.of(
-                                              context,
-                                            ).colorScheme.primary
-                                          : effectiveTextStyle.color,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        ...List.generate(widget.items.length, (index) {
+                          final item = widget.items[index];
+                          final selected = index == activeHoverIndex;
+                          return _buildMenuItem(item, selected);
+                        }),
+                        if (widget.footer != null) ...[
+                          const Divider(height: 17, indent: 10, endIndent: 10),
+                          _buildMenuItem(
+                            widget.footer!,
+                            activeHoverIndex == widget.items.length,
                           ),
-                        );
-                      }),
+                        ],
+                      ],
                     ),
                   ),
                 ),
@@ -279,17 +251,64 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
       ],
     );
   }
-}
 
-/// Clean public model for consumers of the package.
-class GlideMenuItem<T> {
-  const GlideMenuItem({
-    required this.value,
-    required this.label,
-    this.icon,
-  });
+  Widget _buildMenuItem(GlideMenuItem<T> item, bool selected) {
+    final effectiveTextStyle =
+        widget.textStyle ?? Theme.of(context).textTheme.bodyMedium;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final color = item.isDestructive
+        ? Colors.redAccent
+        : (selected ? primaryColor : effectiveTextStyle?.color);
+    final resolvedHighlightColor =
+        widget.highlightColor ??
+        Theme.of(context).colorScheme.primary.withValues(alpha: 0.08);
 
-  final T value;
-  final String label;
-  final Widget? icon;
+    return GestureDetector(
+      onTap: widget.isLockedOpen
+          ? () {
+              widget.onSelected(item.value);
+              widget.onClose();
+            }
+          : null,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 70),
+        curve: Curves.easeOut,
+        height: widget.itemHeight,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? (item.isDestructive
+                    ? Colors.redAccent.withValues(alpha: 0.1)
+                    : resolvedHighlightColor)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(widget.itemBorderRadius),
+        ),
+        child:
+            item.child ??
+            Row(
+              children: [
+                if (item.icon != null) ...[
+                  IconTheme(
+                    data: IconThemeData(size: 20, color: color),
+                    child: item.icon!,
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: effectiveTextStyle?.copyWith(
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+      ),
+    );
+  }
 }

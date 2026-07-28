@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'drag_menu_overlay.dart';
+import 'glide_menu_overlay.dart';
+import 'glide_menu_item.dart';
 
-export 'drag_menu_overlay.dart';
+export 'glide_menu_overlay.dart';
+export 'glide_menu_item.dart';
 
 /// Continuous drag menu with spring-like interaction.
 ///
@@ -21,15 +23,16 @@ class GlideMenu<T> extends StatefulWidget {
     required this.child,
     required this.items,
     required this.onSelected,
+    this.footer,
     this.itemHeight = 35,
     this.menuWidth = 150,
     this.margin = 12,
     this.deadZone = 10,
     this.anchorGap = 8,
-    this.highlightColor = const Color(0x14007AFF),
-    this.backgroundColor = Colors.white,
-    this.borderRadius = 26,
-    this.itemBorderRadius = 26,
+    this.highlightColor,
+    this.backgroundColor,
+    this.borderRadius = 24,
+    this.itemBorderRadius = 24,
     this.enableHaptics = true,
     this.initialIndex = 0,
   });
@@ -37,6 +40,9 @@ class GlideMenu<T> extends StatefulWidget {
   final Widget child;
   final List<GlideMenuItem<T>> items;
   final ValueChanged<T> onSelected;
+
+  /// Optional destructive/final action grouped at the bottom separated by a divider.
+  final GlideMenuItem<T>? footer;
 
   /// Height for each selectable row.
   final double itemHeight;
@@ -53,8 +59,8 @@ class GlideMenu<T> extends StatefulWidget {
   /// Gap between finger position and menu.
   final double anchorGap;
 
-  final Color highlightColor;
-  final Color backgroundColor;
+  final Color? highlightColor;
+  final Color? backgroundColor;
   final double borderRadius;
   final double itemBorderRadius;
   final bool enableHaptics;
@@ -80,8 +86,13 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   double _menuLeft = 0;
   double _menuTop = 0;
 
-
-  double get _menuHeight => widget.items.length * widget.itemHeight + 16;
+  double get _menuHeight {
+    double h = widget.items.length * widget.itemHeight + 16;
+    if (widget.footer != null) {
+      h += widget.itemHeight + 17; // itemHeight + 1px divider + 16px padding
+    }
+    return h;
+  }
 
   @override
   void dispose() {
@@ -122,6 +133,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
           width: widget.menuWidth,
           itemHeight: widget.itemHeight,
           items: widget.items,
+          footer: widget.footer,
           highlightedIndex: _hoveredIndex,
           backgroundColor: widget.backgroundColor,
           highlightColor: widget.highlightColor,
@@ -244,6 +256,11 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     // If we are above the first item or below the last item
     if (localY < 0) return -1;
 
+    if (widget.footer != null &&
+        localY > (widget.items.length * widget.itemHeight) + 17) {
+      return widget.items.length; // footer index
+    }
+
     final index = (localY / widget.itemHeight).floor();
     if (index >= 0 && index < widget.items.length) {
       return index;
@@ -253,11 +270,16 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   }
 
   void _handleLongPressEnd(LongPressEndDetails details) {
-    if (_hoveredIndex >= 0 && _hoveredIndex < widget.items.length) {
+    final totalItems = widget.items.length + (widget.footer != null ? 1 : 0);
+    if (_hoveredIndex >= 0 && _hoveredIndex < totalItems) {
       // User dragged over an item and released. Execute it.
-      widget.onSelected(widget.items[_hoveredIndex].value);
+      if (_hoveredIndex == widget.items.length && widget.footer != null) {
+        widget.onSelected(widget.footer!.value);
+      } else {
+        widget.onSelected(widget.items[_hoveredIndex].value);
+      }
       _removeOverlay();
-      
+
       // Delay reset so the highlight doesn't disappear during the out-animation
       Future.delayed(const Duration(milliseconds: 150), () {
         if (mounted) _reset();

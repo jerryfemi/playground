@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:playground/SpringButton/example_app.dart';
+import 'package:playground/glide_menu/example_app.dart';
 
 void main() {
   runApp(const MyApp());
