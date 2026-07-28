@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -38,7 +39,7 @@ class GlideMenu<T> extends StatefulWidget {
     this.enableHaptics = true,
     this.initialIndex = 0,
   }) : assert(items.length > 0 || footer != null,
-           'GlideMenu requires at least one item or a footer.');
+            'GlideMenu requires at least one item or a footer.');
 
   /// The widget that the user long-presses to open the menu.
   final Widget child;
@@ -104,10 +105,10 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   double _menuTop = 0;
 
   double get _menuHeight => GlideHitTest.menuHeight(
-    itemCount: widget.items.length,
-    itemHeight: widget.itemHeight,
-    hasFooter: widget.footer != null,
-  );
+        itemCount: widget.items.length,
+        itemHeight: widget.itemHeight,
+        hasFooter: widget.footer != null,
+      );
 
   /// Clamps [value] between [min] and [max], gracefully handling
   /// the case where max < min (e.g. menu wider than screen).
@@ -116,30 +117,38 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     return value.clamp(min, max);
   }
 
+  Timer? _closeTimer;
+
   @override
   void dispose() {
-    _removeOverlay();
+    _closeTimer?.cancel();
+    // During dispose, skip the exit animation (nobody sees it)
+    // and remove the overlay synchronously.
+    _overlayEntry?.remove();
+    _overlayEntry = null;
     super.dispose();
   }
 
-  void _removeOverlay() async {
+  void _removeOverlay({VoidCallback? onClosed}) {
     if (_overlayEntry == null || _isClosing) return;
 
     // Trigger closing animation in the overlay
     _isClosing = true;
     _markNeedsBuild();
 
-    // Wait for the reverse spring animation (150ms)
-    await Future.delayed(const Duration(milliseconds: 150));
+    // Wait for the reverse spring animation using a cancellable Timer
+    _closeTimer?.cancel();
+    _closeTimer = Timer(const Duration(milliseconds: 150), () {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
 
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-
-    if (mounted) {
-      setState(() {
-        _isClosing = false;
-      }); // Re-show the original child
-    }
+      if (mounted) {
+        setState(() {
+          _isClosing = false;
+        }); // Re-show the original child
+      }
+      onClosed?.call();
+    });
   }
 
   void _markNeedsBuild() {
@@ -167,10 +176,11 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
           childRect: _childRect,
           onSelected: widget.onSelected,
           onClose: () {
-            _removeOverlay();
-            Future.delayed(const Duration(milliseconds: 150), () {
-              if (mounted) _reset();
-            });
+            _removeOverlay(
+              onClosed: () {
+                if (mounted) _reset();
+              },
+            );
           },
         );
       },
@@ -299,12 +309,11 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
       } else {
         widget.onSelected(widget.items[_hoveredIndex].value);
       }
-      _removeOverlay();
-
-      // Delay reset so the highlight doesn't disappear during the out-animation
-      Future.delayed(const Duration(milliseconds: 150), () {
-        if (mounted) _reset();
-      });
+      _removeOverlay(
+        onClosed: () {
+          if (mounted) _reset();
+        },
+      );
     } else {
       // Didn't select anything via dragging, or just lifted finger. Lock it open!
       _isLockedOpen = true;
