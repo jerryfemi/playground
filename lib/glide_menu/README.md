@@ -1,6 +1,11 @@
 # GlideMenu
 
+<div align="center">
+  <img width="240" height="426" alt="GlideMenu Demo" src="https://github.com/user-attachments/assets/79bc6ded-017b-4d31-9ba3-4631d6b75aa9" />
+</div>
+
 A fluid, continuous drag-to-select context menu and spring button package for Flutter. 
+
 
 `GlideMenu` provides a highly premium, iOS-style scrubbable action menu. Users can long-press to open the menu, continuously drag their finger to scrub through options with haptic feedback, and release to select an action—all in one seamless gesture.
 
