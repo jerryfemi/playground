@@ -20,7 +20,7 @@ class SpringButton extends StatefulWidget {
     required this.child,
     this.onTap,
     this.pressedScale = 0.9,
-    this.dragFriction = 3.0,
+    this.dragFriction = 19.0,
     this.maxTranslation = const Offset(24, 24),
     this.translationMotion,
     this.scaleMotion,
@@ -116,7 +116,7 @@ class _SpringButtonState extends State<SpringButton> {
     }
   }
 
-  // We omit _handleTapCancel. If a genuine cancellation occurs (e.g. scroll view 
+  // We omit _handleTapCancel. If a genuine cancellation occurs (e.g. scroll view
   // takes over), BOTH Tap and Pan recognizers lose the gesture arena, which means
   // onPanCancel will safely handle the reset. If we include onTapCancel, the Pan
   // recognizer winning the arena will trigger onTapCancel and prematurely reset
@@ -136,7 +136,9 @@ class _SpringButtonState extends State<SpringButton> {
     double rubberBand(double distance, double limit) {
       if (distance == 0 || limit == 0) return 0;
       final absDist = distance.abs();
-      return (1.0 - (1.0 / ((absDist * 0.55 / limit) + 1.0))) * limit * distance.sign;
+      return (1.0 - (1.0 / ((absDist * 0.55 / limit) + 1.0))) *
+          limit *
+          distance.sign;
     }
 
     final next = Offset(
@@ -211,15 +213,10 @@ class _SpringButtonState extends State<SpringButton> {
             builder: (context, animatedOffset, child) {
               return Transform.translate(
                 offset: animatedOffset,
-                child: Transform.scale(
-                  scale: animatedScale,
-                  child: child,
-                ),
+                child: Transform.scale(scale: animatedScale, child: child),
               );
             },
-            child: RepaintBoundary(
-              child: widget.child,
-            ),
+            child: RepaintBoundary(child: widget.child),
           );
         },
       ),

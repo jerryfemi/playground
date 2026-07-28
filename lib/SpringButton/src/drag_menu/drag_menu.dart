@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'drag_menu_overlay.dart';
 
-export 'drag_menu_overlay.dart' show DragMenuItem;
+export 'drag_menu_overlay.dart';
 
 /// Continuous drag menu with spring-like interaction.
 ///
@@ -15,11 +15,12 @@ export 'drag_menu_overlay.dart' show DragMenuItem;
 /// 5. On release, the highlighted action executes and overlay closes.
 ///
 /// This intentionally does NOT use `showMenu` or routes.
-class DragMenu extends StatefulWidget {
-  const DragMenu({
+class GlideMenu<T> extends StatefulWidget {
+  const GlideMenu({
     super.key,
     required this.child,
     required this.items,
+    required this.onSelected,
     this.itemHeight = 35,
     this.menuWidth = 150,
     this.margin = 12,
@@ -34,7 +35,8 @@ class DragMenu extends StatefulWidget {
   });
 
   final Widget child;
-  final List<DragMenuItem> items;
+  final List<GlideMenuItem<T>> items;
+  final ValueChanged<T> onSelected;
 
   /// Height for each selectable row.
   final double itemHeight;
@@ -61,10 +63,10 @@ class DragMenu extends StatefulWidget {
   final int initialIndex;
 
   @override
-  State<DragMenu> createState() => _DragMenuState();
+  State<GlideMenu<T>> createState() => _GlideMenuState<T>();
 }
 
-class _DragMenuState extends State<DragMenu> {
+class _GlideMenuState<T> extends State<GlideMenu<T>> {
   OverlayEntry? _overlayEntry;
 
   int _hoveredIndex = -1;
@@ -114,7 +116,7 @@ class _DragMenuState extends State<DragMenu> {
   void _showOverlay() {
     _overlayEntry = OverlayEntry(
       builder: (context) {
-        return DragMenuOverlay(
+        return GlideMenuOverlay<T>(
           left: _menuLeft,
           top: _menuTop,
           width: widget.menuWidth,
@@ -129,6 +131,7 @@ class _DragMenuState extends State<DragMenu> {
           isClosing: _isClosing,
           childReplica: widget.child,
           childRect: _childRect,
+          onSelected: widget.onSelected,
           onClose: () {
             _removeOverlay();
             Future.delayed(const Duration(milliseconds: 150), () {
@@ -252,7 +255,7 @@ class _DragMenuState extends State<DragMenu> {
   void _handleLongPressEnd(LongPressEndDetails details) {
     if (_hoveredIndex >= 0 && _hoveredIndex < widget.items.length) {
       // User dragged over an item and released. Execute it.
-      widget.items[_hoveredIndex].onSelected();
+      widget.onSelected(widget.items[_hoveredIndex].value);
       _removeOverlay();
       
       // Delay reset so the highlight doesn't disappear during the out-animation

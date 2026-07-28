@@ -7,8 +7,8 @@ import 'package:motor/motor.dart';
 /// Important:
 /// - [IgnorePointer] is used so the overlay does not steal the gesture.
 /// - The original [GestureDetector] continues receiving long-press updates.
-class DragMenuOverlay extends StatefulWidget {
-  const DragMenuOverlay({
+class GlideMenuOverlay<T> extends StatefulWidget {
+  const GlideMenuOverlay({
     super.key,
     required this.left,
     required this.top,
@@ -18,6 +18,7 @@ class DragMenuOverlay extends StatefulWidget {
     required this.highlightedIndex,
     required this.isLockedOpen,
     required this.isClosing,
+    required this.onSelected,
     required this.onClose,
     this.childReplica,
     this.childRect,
@@ -34,10 +35,11 @@ class DragMenuOverlay extends StatefulWidget {
   final double top;
   final double width;
   final double itemHeight;
-  final List<DragMenuItem> items;
+  final List<GlideMenuItem<T>> items;
   final int highlightedIndex;
   final bool isLockedOpen;
   final bool isClosing;
+  final ValueChanged<T> onSelected;
   final VoidCallback onClose;
   final Widget? childReplica;
   final Rect? childRect;
@@ -51,10 +53,10 @@ class DragMenuOverlay extends StatefulWidget {
   final TextStyle? textStyle;
 
   @override
-  State<DragMenuOverlay> createState() => _DragMenuOverlayState();
+  State<GlideMenuOverlay<T>> createState() => _GlideMenuOverlayState<T>();
 }
 
-class _DragMenuOverlayState extends State<DragMenuOverlay> {
+class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
   double _scale = 0.8;
   double _opacity = 0.0;
   int _localHoveredIndex = -1;
@@ -74,7 +76,7 @@ class _DragMenuOverlayState extends State<DragMenuOverlay> {
   }
 
   @override
-  void didUpdateWidget(DragMenuOverlay oldWidget) {
+  void didUpdateWidget(GlideMenuOverlay<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isClosing && !oldWidget.isClosing) {
       // Trigger reverse animation
@@ -164,7 +166,7 @@ class _DragMenuOverlayState extends State<DragMenuOverlay> {
               onPanEnd: (details) {
                 if (_localHoveredIndex >= 0 &&
                     _localHoveredIndex < widget.items.length) {
-                  widget.items[_localHoveredIndex].onSelected();
+                  widget.onSelected(widget.items[_localHoveredIndex].value);
                   widget.onClose();
                 } else {
                   setState(() => _localHoveredIndex = -1);
@@ -211,7 +213,7 @@ class _DragMenuOverlayState extends State<DragMenuOverlay> {
                         return GestureDetector(
                           onTap: widget.isLockedOpen
                               ? () {
-                                  item.onSelected();
+                                  widget.onSelected(item.value);
                                   widget.onClose();
                                 }
                               : null,
@@ -280,14 +282,14 @@ class _DragMenuOverlayState extends State<DragMenuOverlay> {
 }
 
 /// Clean public model for consumers of the package.
-class DragMenuItem {
-  const DragMenuItem({
+class GlideMenuItem<T> {
+  const GlideMenuItem({
+    required this.value,
     required this.label,
-    required this.onSelected,
     this.icon,
   });
 
+  final T value;
   final String label;
-  final VoidCallback onSelected;
   final Widget? icon;
 }

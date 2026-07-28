@@ -10,35 +10,33 @@ class DemoPage extends StatefulWidget {
 }
 
 class _DemoPageState extends State<DemoPage> {
-  late final List<DragMenuItem> backMenuItems = [
-    DragMenuItem(
+  late final List<GlideMenuItem<String>> backMenuItems = [
+    const GlideMenuItem<String>(
+      value: 'home',
       label: 'Home',
-      icon: const Icon(Icons.home_rounded),
-      onSelected: () => debugPrint('Home selected'),
+      icon: Icon(Icons.home_rounded),
     ),
-    DragMenuItem(
+    const GlideMenuItem<String>(
+      value: 'settings',
       label: 'Settings',
-      icon: const Icon(Icons.settings_rounded),
-      onSelected: () => debugPrint('Settings selected'),
+      icon: Icon(Icons.settings_rounded),
     ),
-    DragMenuItem(
+    const GlideMenuItem<String>(
+      value: 'search',
       label: 'Search',
-      icon: const Icon(Icons.search_rounded),
-      onSelected: () => Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (context) => const TestScreen())),
+      icon: Icon(Icons.search_rounded),
     ),
-    DragMenuItem(
+    const GlideMenuItem<String>(
+      value: 'close',
       label: 'Close Chat',
-      icon: const Icon(Icons.close_rounded, color: Colors.redAccent),
-      onSelected: () => debugPrint('Close Chat selected'),
+      icon: Icon(Icons.close_rounded, color: Colors.redAccent),
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6), // Light gray background
+      backgroundColor: const Color(0xFFF3F4F6),
       body: SafeArea(
         child: Column(
           children: [
@@ -48,17 +46,27 @@ class _DemoPageState extends State<DemoPage> {
               color: Colors.white,
               child: Row(
                 children: [
-                  // The DragMenu and SpringButton back button
-                  DragMenu(
+                  // The GlideMenu and SpringButton back button
+                  GlideMenu<String>(
                     items: backMenuItems,
                     itemHeight: 40,
                     menuWidth: 180,
                     borderRadius: 16,
                     itemBorderRadius: 16,
                     deadZone: 10,
+                    onSelected: (value) {
+                      if (value == 'search') {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const TestScreen(),
+                          ),
+                        );
+                      } else {
+                        debugPrint('$value selected');
+                      }
+                    },
                     child: SpringButton(
                       pressedScale: 0.85,
-                      dragFriction: 4.0, // tighter rubber band
                       enableTapHaptics: true,
                       onTap: () {
                         // Action for back button
@@ -155,7 +163,6 @@ class _DemoPageState extends State<DemoPage> {
                     // ANOTHER STANDALONE SPRING BUTTON (Attachment)
                     SpringButton(
                       pressedScale: 0.8,
-                      dragFriction: 5.0,
                       enableTapHaptics: true,
                       onTap: () {
                         // Action for attachment
@@ -225,24 +232,25 @@ class _DemoPageState extends State<DemoPage> {
   Widget _buildChatBubble(String text, {required bool isMe}) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: DragMenu(
-        items: [
-          DragMenuItem(
+      child: GlideMenu<String>(
+        items: const [
+          GlideMenuItem<String>(
+            value: 'reply',
             label: 'Reply',
-            icon: const Icon(Icons.reply_rounded),
-            onSelected: () => debugPrint('Reply selected'),
+            icon: Icon(Icons.reply_rounded),
           ),
-          DragMenuItem(
+          GlideMenuItem<String>(
+            value: 'copy',
             label: 'Copy',
-            icon: const Icon(Icons.copy_rounded),
-            onSelected: () => debugPrint('Copy selected'),
+            icon: Icon(Icons.copy_rounded),
           ),
-          DragMenuItem(
+          GlideMenuItem<String>(
+            value: 'delete',
             label: 'Delete',
-            icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-            onSelected: () => debugPrint('Delete selected'),
+            icon: Icon(Icons.delete_outline_rounded, color: Colors.red),
           ),
         ],
+        onSelected: (value) => debugPrint('$value selected on bubble'),
         menuWidth: 160,
 
         child: Container(
