@@ -13,8 +13,9 @@ import 'glide_hit_test.dart';
 class GlideMenuOverlay<T> extends StatefulWidget {
   const GlideMenuOverlay({
     super.key,
-    required this.left,
-    required this.top,
+    required this.pressGlobalPosition,
+    required this.margin,
+    required this.anchorGap,
     required this.width,
     required this.itemHeight,
     required this.items,
@@ -35,8 +36,9 @@ class GlideMenuOverlay<T> extends StatefulWidget {
     this.textStyle,
   });
 
-  final double left;
-  final double top;
+  final Offset pressGlobalPosition;
+  final double margin;
+  final double anchorGap;
   final double width;
   final double itemHeight;
   final List<GlideMenuItem<T>> items;
@@ -118,134 +120,153 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
     final activeHoverIndex =
         widget.isLockedOpen ? _localHoveredIndex : widget.highlightedIndex;
 
-    return Stack(
-      children: [
-        // Dimmed background
-        Positioned.fill(
-          child: GestureDetector(
-            onTap: widget.isLockedOpen ? widget.onClose : null,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 150),
-              opacity: _opacity,
-              child: Container(color: Colors.black26),
-            ),
-          ),
-        ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final media = MediaQuery.of(context);
+        
+        final menuHeight = GlideHitTest.menuHeight(
+          itemCount: widget.items.length,
+          itemHeight: widget.itemHeight,
+          hasFooter: widget.footer != null,
+        );
 
-        // Child Replica (Lifting effect)
-        if (widget.childReplica != null && widget.childRect != null)
-          Positioned(
-            left: widget.childRect!.left,
-            top: widget.childRect!.top,
-            width: widget.childRect!.width,
-            height: widget.childRect!.height,
-            child: SingleMotionBuilder(
-              motion: const CupertinoMotion.bouncy(extraBounce: 0.25),
-              value: _scale > 0.8 ? 1.05 : 1.0, // Scale up slightly to "lift"
-              builder: (context, scale, child) {
-                return Transform.scale(
-                  scale: scale,
-                  alignment: Alignment.center,
-                  child: child,
-                );
-              },
-              child: Material(
-                type: MaterialType.transparency,
-                child: widget.childReplica!,
+        final position = GlideHitTest.calculateMenuPosition(
+          screenSize: media.size,
+          safePadding: media.padding,
+          keyboardHeight: media.viewInsets.bottom,
+          childRect: widget.childRect,
+          pressGlobalPosition: widget.pressGlobalPosition,
+          menuWidth: widget.width,
+          menuHeight: menuHeight,
+          margin: widget.margin,
+          anchorGap: widget.anchorGap,
+        );
+
+        return Stack(
+          children: [
+            // Dimmed background
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: widget.isLockedOpen ? widget.onClose : null,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: _opacity,
+                  child: Container(color: Colors.black26),
+                ),
               ),
             ),
-          ),
 
-        // The Menu
-        Positioned(
-          left: widget.left,
-          top: widget.top,
-          width: widget.width,
-          child: IgnorePointer(
-            ignoring: !widget.isLockedOpen,
-            child: GestureDetector(
-              onPanDown: (details) => _updateLocalHover(details.localPosition),
-              onPanUpdate: (details) =>
-                  _updateLocalHover(details.localPosition),
-              onPanEnd: (details) {
-                final totalItems =
-                    widget.items.length + (widget.footer != null ? 1 : 0);
-                if (_localHoveredIndex >= 0 &&
-                    _localHoveredIndex < totalItems) {
-                  if (_localHoveredIndex == widget.items.length &&
-                      widget.footer != null) {
-                    widget.onSelected(widget.footer!.value);
-                  } else {
-                    widget.onSelected(widget.items[_localHoveredIndex].value);
-                  }
-                  widget.onClose();
-                } else {
-                  setState(() => _localHoveredIndex = -1);
-                }
-              },
-              onPanCancel: () => setState(() => _localHoveredIndex = -1),
-              child: SingleMotionBuilder(
-                motion: const CupertinoMotion.bouncy(extraBounce: 0.25),
-                value: _scale,
-                builder: (context, scale, child) {
-                  // If the menu is rendered ABOVE the child, it should spring up from its bottom.
-                  // If the menu is rendered BELOW the child, it should spring down from its top.
-                  final bool isAboveChild =
-                      widget.top < (widget.childRect?.top ?? 0);
-
-                  return Transform.scale(
-                    scale: scale,
-                    alignment: isAboveChild
-                        ? Alignment.bottomCenter
-                        : Alignment.topCenter,
-                    child: AnimatedOpacity(
-                      opacity: _opacity,
-                      duration: const Duration(milliseconds: 150),
+            // Child Replica (Lifting effect)
+            if (widget.childReplica != null && widget.childRect != null)
+              Positioned(
+                left: widget.childRect!.left,
+                top: widget.childRect!.top,
+                width: widget.childRect!.width,
+                height: widget.childRect!.height,
+                child: SingleMotionBuilder(
+                  motion: const CupertinoMotion.bouncy(extraBounce: 0.25),
+                  value: _scale > 0.8 ? 1.05 : 1.0, // Scale up slightly to "lift"
+                  builder: (context, scale, child) {
+                    return Transform.scale(
+                      scale: scale,
+                      alignment: Alignment.center,
                       child: child,
-                    ),
-                  );
-                },
-                child: Material(
-                  color: Colors.transparent,
-                  child: Container(
-                    padding: widget.padding,
-                    decoration: BoxDecoration(
-                      color: resolvedBackgroundColor,
-                      borderRadius: BorderRadius.circular(widget.borderRadius),
-                      boxShadow: widget.shadow ??
-                          const [
-                            BoxShadow(
-                              color: Color(0x22000000),
-                              blurRadius: 18,
-                              offset: Offset(0, 8),
-                            ),
+                    );
+                  },
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: widget.childReplica!,
+                  ),
+                ),
+              ),
+
+            // The Menu
+            Positioned(
+              left: position.left,
+              top: position.top,
+              width: widget.width,
+              child: IgnorePointer(
+                ignoring: !widget.isLockedOpen,
+                child: GestureDetector(
+                  onPanDown: (details) => _updateLocalHover(details.localPosition),
+                  onPanUpdate: (details) =>
+                      _updateLocalHover(details.localPosition),
+                  onPanEnd: (details) {
+                    final totalItems =
+                        widget.items.length + (widget.footer != null ? 1 : 0);
+                    if (_localHoveredIndex >= 0 &&
+                        _localHoveredIndex < totalItems) {
+                      if (_localHoveredIndex == widget.items.length &&
+                          widget.footer != null) {
+                        widget.onSelected(widget.footer!.value);
+                      } else {
+                        widget.onSelected(widget.items[_localHoveredIndex].value);
+                      }
+                      widget.onClose();
+                    } else {
+                      setState(() => _localHoveredIndex = -1);
+                    }
+                  },
+                  onPanCancel: () => setState(() => _localHoveredIndex = -1),
+                  child: SingleMotionBuilder(
+                    motion: const CupertinoMotion.bouncy(extraBounce: 0.25),
+                    value: _scale,
+                    builder: (context, scale, child) {
+                      return Transform.scale(
+                        scale: scale,
+                        alignment: position.spawnUpward
+                            ? Alignment.bottomCenter
+                            : Alignment.topCenter,
+                        child: AnimatedOpacity(
+                          opacity: _opacity,
+                          duration: const Duration(milliseconds: 150),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Container(
+                        padding: widget.padding,
+                        decoration: BoxDecoration(
+                          color: resolvedBackgroundColor,
+                          borderRadius: BorderRadius.circular(widget.borderRadius),
+                          boxShadow: widget.shadow ??
+                              const [
+                                BoxShadow(
+                                  color: Color(0x22000000),
+                                  blurRadius: 18,
+                                  offset: Offset(0, 8),
+                                ),
+                              ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ...List.generate(widget.items.length, (index) {
+                              final item = widget.items[index];
+                              final selected = index == activeHoverIndex;
+                              return _buildMenuItem(item, selected);
+                            }),
+                            if (widget.footer != null) ...[
+                              const Divider(height: 17, indent: 6, endIndent: 6),
+                              _buildMenuItem(
+                                widget.footer!,
+                                activeHoverIndex == widget.items.length,
+                              ),
+                            ],
                           ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        ...List.generate(widget.items.length, (index) {
-                          final item = widget.items[index];
-                          final selected = index == activeHoverIndex;
-                          return _buildMenuItem(item, selected);
-                        }),
-                        if (widget.footer != null) ...[
-                          const Divider(height: 17, indent: 6, endIndent: 6),
-                          _buildMenuItem(
-                            widget.footer!,
-                            activeHoverIndex == widget.items.length,
-                          ),
-                        ],
-                      ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 

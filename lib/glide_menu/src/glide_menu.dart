@@ -93,29 +93,14 @@ class GlideMenu<T> extends StatefulWidget {
 class _GlideMenuState<T> extends State<GlideMenu<T>> {
   OverlayEntry? _overlayEntry;
 
-  int _hoveredIndex = -1;
+  Rect? _childRect;
+  Offset _pressGlobalPosition = Offset.zero;
+
   bool _isLockedOpen = false;
   bool _isClosing = false;
+  int _hoveredIndex = -1;
 
-  Offset? _pressGlobalPosition;
-  Rect? _childRect;
-  bool _spawnUpward = false;
-
-  double _menuLeft = 0;
-  double _menuTop = 0;
-
-  double get _menuHeight => GlideHitTest.menuHeight(
-        itemCount: widget.items.length,
-        itemHeight: widget.itemHeight,
-        hasFooter: widget.footer != null,
-      );
-
-  /// Clamps [value] between [min] and [max], gracefully handling
-  /// the case where max < min (e.g. menu wider than screen).
-  double _safeClamp(double value, double min, double max) {
-    if (max < min) return min; // Menu doesn't fit; pin to the edge
-    return value.clamp(min, max);
-  }
+  MenuPosition? _initialPosition;
 
   Timer? _closeTimer;
 
@@ -159,8 +144,9 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     _overlayEntry = OverlayEntry(
       builder: (context) {
         return GlideMenuOverlay<T>(
-          left: _menuLeft,
-          top: _menuTop,
+          pressGlobalPosition: _pressGlobalPosition,
+          margin: widget.margin,
+          anchorGap: widget.anchorGap,
           width: widget.menuWidth,
           itemHeight: widget.itemHeight,
           items: widget.items,
@@ -205,64 +191,23 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
       _childRect = position & size;
     }
 
-    // Fetch screen metrics once — accounting for safe areas and keyboard.
     final media = MediaQuery.of(context);
-    final safePadding = media.padding; // notch, status bar, gesture bar
-    final keyboardHeight = media.viewInsets.bottom;
-
-    final screenWidth = media.size.width;
-    final screenHeight = media.size.height;
-
-    final safeTop = safePadding.top;
-    final safeBottom = safePadding.bottom + keyboardHeight;
-    final safeLeft = safePadding.left;
-    final safeRight = safePadding.right;
-
-    final totalMenuHeight = _menuHeight;
-    final childBottom = _childRect?.bottom ?? details.globalPosition.dy;
-    final childTop = _childRect?.top ?? details.globalPosition.dy;
-
-    final spaceBelow = screenHeight - childBottom - widget.margin - safeBottom;
-    final spaceAbove = childTop - widget.margin - safeTop;
-
-    // If insufficient space below, prefer spawning upward.
-    _spawnUpward = spaceBelow < totalMenuHeight && spaceAbove > spaceBelow;
-
-    if (_childRect != null) {
-      // If widget is mostly on the right side of the screen, right-align the menu
-      if (_childRect!.center.dx > screenWidth / 2) {
-        _menuLeft = _safeClamp(
-          _childRect!.right - widget.menuWidth,
-          widget.margin + safeLeft,
-          screenWidth - widget.menuWidth - widget.margin - safeRight,
-        );
-      } else {
-        // Otherwise left-align
-        _menuLeft = _safeClamp(
-          _childRect!.left,
-          widget.margin + safeLeft,
-          screenWidth - widget.menuWidth - widget.margin - safeRight,
-        );
-      }
-    } else {
-      _menuLeft = _safeClamp(
-        details.globalPosition.dx + 12,
-        widget.margin + safeLeft,
-        screenWidth - widget.menuWidth - widget.margin - safeRight,
-      );
-    }
-
-    _menuTop = _spawnUpward
-        ? _safeClamp(
-            childTop - totalMenuHeight - widget.anchorGap,
-            widget.margin + safeTop,
-            screenHeight - totalMenuHeight - widget.margin - safeBottom,
-          )
-        : _safeClamp(
-            childBottom + widget.anchorGap,
-            widget.margin + safeTop,
-            screenHeight - totalMenuHeight - widget.margin - safeBottom,
-          );
+    
+    _initialPosition = GlideHitTest.calculateMenuPosition(
+      screenSize: media.size,
+      safePadding: media.padding,
+      keyboardHeight: media.viewInsets.bottom,
+      childRect: _childRect,
+      pressGlobalPosition: _pressGlobalPosition,
+      menuWidth: widget.menuWidth,
+      menuHeight: GlideHitTest.menuHeight(
+        itemCount: widget.items.length,
+        itemHeight: widget.itemHeight,
+        hasFooter: widget.footer != null,
+      ),
+      margin: widget.margin,
+      anchorGap: widget.anchorGap,
+    );
 
     _showOverlay();
     _markNeedsBuild();
@@ -274,7 +219,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   }
 
   void _handleLongPressMoveUpdate(LongPressMoveUpdateDetails details) {
-    if (_overlayEntry == null || _pressGlobalPosition == null) return;
+    if (_overlayEntry == null) return;
     if (widget.items.isEmpty) return;
 
     final index = _getHoveredIndex(details.globalPosition);
@@ -289,10 +234,11 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   }
 
   int _getHoveredIndex(Offset globalPos) {
+    if (_initialPosition == null) return -1;
     return GlideHitTest.indexFromGlobal(
       globalPosition: globalPos,
-      menuLeft: _menuLeft,
-      menuTop: _menuTop,
+      menuLeft: _initialPosition!.left,
+      menuTop: _initialPosition!.top,
       menuWidth: widget.menuWidth,
       itemHeight: widget.itemHeight,
       itemCount: widget.items.length,
@@ -330,11 +276,9 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   void _reset() {
     _hoveredIndex = -1;
     _isLockedOpen = false;
-    _pressGlobalPosition = null;
+    _pressGlobalPosition = Offset.zero;
     _childRect = null;
-    _spawnUpward = false;
-    _menuLeft = 0;
-    _menuTop = 0;
+    _initialPosition = null;
     if (mounted) setState(() {});
   }
 

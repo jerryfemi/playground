@@ -170,6 +170,13 @@ class _DemoPageState extends State<DemoPage> {
             label: 'Call',
             icon: Icon(Icons.call_rounded),
           ),
+          ...List.generate(20, (index) {
+            return GlideMenuItem<String>(
+              value: 'item_$index',
+              label: 'Long List Item $index',
+              icon: const Icon(Icons.circle_outlined),
+            );
+          }),
           const GlideMenuItem<String>(
             value: 'block',
             label: 'Block User',

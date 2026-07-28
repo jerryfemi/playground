@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'package:flutter/material.dart';
 
 /// Shared hit-test logic for GlideMenu.
 ///
@@ -118,4 +118,94 @@ class GlideHitTest {
 
     return -1;
   }
+
+  /// Clamps [value] between [min] and [max], gracefully handling
+  /// the case where max < min (e.g. menu wider than screen).
+  static double safeClamp(double value, double min, double max) {
+    if (max < min) return min; // Menu doesn't fit; pin to the edge
+    return value.clamp(min, max);
+  }
+
+  /// Calculates the best X/Y position for the menu, accounting for screen bounds,
+  /// safe areas, keyboard, and preferred alignment.
+  static MenuPosition calculateMenuPosition({
+    required Size screenSize,
+    required EdgeInsets safePadding,
+    required double keyboardHeight,
+    required Rect? childRect,
+    required Offset pressGlobalPosition,
+    required double menuWidth,
+    required double menuHeight,
+    required double margin,
+    required double anchorGap,
+  }) {
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+
+    final safeTop = safePadding.top;
+    final safeBottom = safePadding.bottom + keyboardHeight;
+    final safeLeft = safePadding.left;
+    final safeRight = safePadding.right;
+
+    final childBottom = childRect?.bottom ?? pressGlobalPosition.dy;
+    final childTop = childRect?.top ?? pressGlobalPosition.dy;
+
+    final spaceBelow = screenHeight - childBottom - margin - safeBottom;
+    final spaceAbove = childTop - margin - safeTop;
+
+    // If insufficient space below, prefer spawning upward.
+    final spawnUpward = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+
+    double menuLeft = 0;
+    if (childRect != null) {
+      // If widget is mostly on the right side of the screen, right-align the menu
+      if (childRect.center.dx > screenWidth / 2) {
+        menuLeft = safeClamp(
+          childRect.right - menuWidth,
+          margin + safeLeft,
+          screenWidth - menuWidth - margin - safeRight,
+        );
+      } else {
+        // Otherwise left-align
+        menuLeft = safeClamp(
+          childRect.left,
+          margin + safeLeft,
+          screenWidth - menuWidth - margin - safeRight,
+        );
+      }
+    } else {
+      menuLeft = safeClamp(
+        pressGlobalPosition.dx + 12,
+        margin + safeLeft,
+        screenWidth - menuWidth - margin - safeRight,
+      );
+    }
+
+    double menuTop = spawnUpward
+        ? safeClamp(
+            childTop - menuHeight - anchorGap,
+            margin + safeTop,
+            screenHeight - menuHeight - margin - safeBottom,
+          )
+        : safeClamp(
+            childBottom + anchorGap,
+            margin + safeTop,
+            screenHeight - menuHeight - margin - safeBottom,
+          );
+
+    return MenuPosition(left: menuLeft, top: menuTop, spawnUpward: spawnUpward);
+  }
+}
+
+/// Holds calculated position coordinates and animation direction.
+class MenuPosition {
+  final double left;
+  final double top;
+  final bool spawnUpward;
+
+  const MenuPosition({
+    required this.left,
+    required this.top,
+    required this.spawnUpward,
+  });
 }
