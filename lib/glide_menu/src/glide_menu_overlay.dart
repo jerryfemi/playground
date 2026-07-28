@@ -194,12 +194,20 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
               },
               onPanCancel: () => setState(() => _localHoveredIndex = -1),
               child: SingleMotionBuilder(
-                motion: const CupertinoMotion.snappy(),
+                // Use a custom spring motion that matches iOS's bouncy menu entrance
+                motion: const CupertinoMotion.bouncy(extraBounce: 0.15),
                 value: _scale,
                 builder: (context, scale, child) {
+                  // If the menu is rendered ABOVE the child, it should spring up from its bottom.
+                  // If the menu is rendered BELOW the child, it should spring down from its top.
+                  final bool isAboveChild =
+                      widget.top < (widget.childRect?.top ?? 0);
+
                   return Transform.scale(
                     scale: scale,
-                    alignment: Alignment.center,
+                    alignment: isAboveChild
+                        ? Alignment.bottomCenter
+                        : Alignment.topCenter,
                     child: AnimatedOpacity(
                       opacity: _opacity,
                       duration: const Duration(milliseconds: 150),
