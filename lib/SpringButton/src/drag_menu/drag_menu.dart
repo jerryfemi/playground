@@ -69,6 +69,7 @@ class _DragMenuState extends State<DragMenu> {
 
   int _hoveredIndex = -1;
   bool _isLockedOpen = false;
+  bool _isClosing = false;
 
   Offset? _pressGlobalPosition;
   Rect? _childRect;
@@ -89,11 +90,23 @@ class _DragMenuState extends State<DragMenu> {
     super.dispose();
   }
 
-  void _removeOverlay() {
-    if (_overlayEntry != null) {
-      _overlayEntry?.remove();
-      _overlayEntry = null;
-      setState(() {}); // Re-show the original child
+  void _removeOverlay() async {
+    if (_overlayEntry == null || _isClosing) return;
+
+    // Trigger closing animation in the overlay
+    _isClosing = true;
+    _markNeedsBuild();
+
+    // Wait for the reverse spring animation (150ms)
+    await Future.delayed(const Duration(milliseconds: 150));
+
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+
+    if (mounted) {
+      setState(() {
+        _isClosing = false;
+      }); // Re-show the original child
     }
   }
 
@@ -116,11 +129,14 @@ class _DragMenuState extends State<DragMenu> {
           borderRadius: widget.borderRadius,
           itemBorderRadius: widget.itemBorderRadius,
           isLockedOpen: _isLockedOpen,
+          isClosing: _isClosing,
           childReplica: widget.child,
           childRect: _childRect,
           onClose: () {
             _removeOverlay();
-            _reset();
+            Future.delayed(const Duration(milliseconds: 150), () {
+              if (mounted) _reset();
+            });
           },
         );
       },
@@ -242,7 +258,11 @@ class _DragMenuState extends State<DragMenu> {
       // User dragged over an item and released. Execute it.
       widget.items[_hoveredIndex].onSelected();
       _removeOverlay();
-      _reset();
+      
+      // Delay reset so the highlight doesn't disappear during the out-animation
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (mounted) _reset();
+      });
     } else {
       // Didn't select anything via dragging, or just lifted finger. Lock it open!
       _isLockedOpen = true;

@@ -124,7 +124,7 @@ class _DemoPageState extends State<DemoPage> {
             ),
 
             // Divider
-            Container(height: 1, color: Colors.black.withOpacity(0.05)),
+            Container(height: 1, color: Colors.black.withValues(alpha: 0.05)),
 
             // Mock Chat Body
             Expanded(

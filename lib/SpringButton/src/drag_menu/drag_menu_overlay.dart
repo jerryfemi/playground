@@ -17,6 +17,7 @@ class DragMenuOverlay extends StatefulWidget {
     required this.items,
     required this.highlightedIndex,
     required this.isLockedOpen,
+    required this.isClosing,
     required this.onClose,
     this.childReplica,
     this.childRect,
@@ -36,6 +37,7 @@ class DragMenuOverlay extends StatefulWidget {
   final List<DragMenuItem> items;
   final int highlightedIndex;
   final bool isLockedOpen;
+  final bool isClosing;
   final VoidCallback onClose;
   final Widget? childReplica;
   final Rect? childRect;
@@ -69,6 +71,18 @@ class _DragMenuOverlayState extends State<DragMenuOverlay> {
         });
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(DragMenuOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isClosing && !oldWidget.isClosing) {
+      // Trigger reverse animation
+      setState(() {
+        _scale = 0.8;
+        _opacity = 0.0;
+      });
+    }
   }
 
   void _updateLocalHover(Offset localPosition) {
