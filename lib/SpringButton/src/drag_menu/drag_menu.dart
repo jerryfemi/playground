@@ -78,9 +78,6 @@ class _DragMenuState extends State<DragMenu> {
   double _menuLeft = 0;
   double _menuTop = 0;
 
-  /// Cached screen size — captured once in [_handleLongPressStart] and reused
-  /// in [_handleLongPressMoveUpdate] to avoid a widget tree lookup every frame.
-  Size? _cachedScreenSize;
 
   double get _menuHeight => widget.items.length * widget.itemHeight + 16;
 
@@ -161,10 +158,9 @@ class _DragMenuState extends State<DragMenu> {
       _childRect = position & size;
     }
 
-    // Cache screen size once — it can't change mid-gesture.
+    // Fetch screen size once — it can't change mid-gesture.
     final media = MediaQuery.of(context);
     final size = media.size;
-    _cachedScreenSize = size;
 
     final totalMenuHeight = _menuHeight;
     final childBottom = _childRect?.bottom ?? details.globalPosition.dy;
@@ -284,7 +280,6 @@ class _DragMenuState extends State<DragMenu> {
     _spawnUpward = false;
     _menuLeft = 0;
     _menuTop = 0;
-    _cachedScreenSize = null;
     if (mounted) setState(() {});
   }
 
