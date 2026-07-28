@@ -37,8 +37,13 @@ class GlideMenu<T> extends StatefulWidget {
     this.initialIndex = 0,
   });
 
+  /// The widget that the user long-presses to open the menu.
   final Widget child;
+
+  /// The list of items to display in the menu.
   final List<GlideMenuItem<T>> items;
+
+  /// Called when the user releases their finger over a menu item.
   final ValueChanged<T> onSelected;
 
   /// Optional destructive/final action grouped at the bottom separated by a divider.
@@ -59,10 +64,19 @@ class GlideMenu<T> extends StatefulWidget {
   /// Gap between finger position and menu.
   final double anchorGap;
 
+  /// The background color of the hovered item. Defaults to Theme primary with low opacity.
   final Color? highlightColor;
+
+  /// The background color of the menu. Defaults to Theme surface color.
   final Color? backgroundColor;
+
+  /// Corner radius of the entire menu container.
   final double borderRadius;
+
+  /// Corner radius of each individual menu item.
   final double itemBorderRadius;
+
+  /// If true, triggers haptic feedback during interactions.
   final bool enableHaptics;
 
   /// Initial highlighted item when menu appears.
