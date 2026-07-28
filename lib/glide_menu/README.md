@@ -17,6 +17,23 @@ A fluid, continuous drag-to-select context menu and spring button package for Fl
 
 This package heavily relies on the amazing [motor](https://pub.dev/packages/motor) package.
 
+## Installation
+
+Since this package is currently hosted inside a larger repository, you can install it directly from GitHub by adding this to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  glide_menu:
+    git:
+      url: https://github.com/jerryfemi/playground.git
+      path: lib/glide_menu
+```
+
+Then, import it wherever you need it:
+```dart
+import 'package:glide_menu/glide_menu.dart';
+```
+
 ## Usage
 
 ### 1. GlideMenu

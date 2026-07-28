@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:playground/glide_menu/glide_menu.dart';
+
+import 'src/glide_menu.dart';
+import 'src/spring_button.dart';
 
 class DemoPage extends StatefulWidget {
   const DemoPage({super.key});
@@ -28,15 +30,11 @@ class _DemoPageState extends State<DemoPage> {
           _buildSectionTitle('1. Classic Action Menu'),
           const SizedBox(height: 12),
           _buildClassicMenuExample(),
-
           const SizedBox(height: 48),
-
           _buildSectionTitle('2. Custom Child Override'),
           const SizedBox(height: 12),
           _buildCustomChildExample(),
-
           const SizedBox(height: 48),
-
           _buildSectionTitle('3. Standalone SpringButton'),
           const SizedBox(height: 12),
           _buildSpringButtonShowcase(),
