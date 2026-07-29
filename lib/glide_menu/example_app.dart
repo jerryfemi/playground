@@ -170,7 +170,7 @@ class _DemoPageState extends State<DemoPage> {
             label: 'Call',
             icon: Icon(Icons.call_rounded),
           ),
-          ...List.generate(20, (index) {
+          ...List.generate(6, (index) {
             return GlideMenuItem<String>(
               value: 'item_$index',
               label: 'Long List Item $index',
@@ -191,7 +191,7 @@ class _DemoPageState extends State<DemoPage> {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 24),
           decoration: BoxDecoration(
-            color: Colors.deepPurpleAccent.withValues(alpha: 0.1),
+            color: Colors.deepPurpleAccent.withValues(alpha: 1),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: Colors.deepPurpleAccent.withValues(alpha: 0.2),

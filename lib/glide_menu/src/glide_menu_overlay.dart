@@ -66,7 +66,15 @@ class GlideMenuOverlay<T> extends StatefulWidget {
 class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
   double _scale = 0.8;
   double _opacity = 0.0;
+  double _animationValue = 0.0;
   int _localHoveredIndex = -1;
+  ScrollController? _scrollController;
+
+  @override
+  void dispose() {
+    _scrollController?.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -77,6 +85,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
         setState(() {
           _scale = 1.0;
           _opacity = 1.0;
+          _animationValue = 1.0;
         });
       }
     });
@@ -90,6 +99,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
       setState(() {
         _scale = 0.8;
         _opacity = 0.0;
+        _animationValue = 0.0;
       });
     }
   }
@@ -142,137 +152,183 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
           anchorGap: widget.anchorGap,
         );
 
+        _scrollController ??=
+            ScrollController(initialScrollOffset: position.shiftAmount);
+
         return Stack(
           children: [
-            // Dimmed background
+            // Fixed Dimmed background (not hit testable)
             Positioned.fill(
-              child: GestureDetector(
-                onTap: widget.isLockedOpen ? widget.onClose : null,
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 150),
-                  opacity: _opacity,
-                  child: Container(color: Colors.black26),
-                ),
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 150),
+                opacity: _opacity,
+                child: Container(color: Colors.black26),
               ),
             ),
 
-            // Child Replica (Lifting effect)
-            if (widget.childReplica != null && widget.childRect != null)
-              Positioned(
-                left: widget.childRect!.left,
-                top: widget.childRect!.top,
-                width: widget.childRect!.width,
-                height: widget.childRect!.height,
-                child: SingleMotionBuilder(
-                  motion: const CupertinoMotion.bouncy(extraBounce: 0.25),
-                  value:
-                      _scale > 0.8 ? 1.05 : 1.0, // Scale up slightly to "lift"
-                  builder: (context, scale, child) {
-                    return Transform.scale(
-                      scale: scale,
-                      alignment: Alignment.center,
-                      child: child,
-                    );
-                  },
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: widget.childReplica!,
-                  ),
-                ),
-              ),
-
-            // The Menu
-            Positioned(
-              left: position.left,
-              top: position.top,
-              width: widget.width,
+            // Scrolling content canvas
+            Positioned.fill(
               child: IgnorePointer(
                 ignoring: !widget.isLockedOpen,
-                child: GestureDetector(
-                  onPanDown: (details) =>
-                      _updateLocalHover(details.localPosition),
-                  onPanUpdate: (details) =>
-                      _updateLocalHover(details.localPosition),
-                  onPanEnd: (details) {
-                    final totalItems =
-                        widget.items.length + (widget.footer != null ? 1 : 0);
-                    if (_localHoveredIndex >= 0 &&
-                        _localHoveredIndex < totalItems) {
-                      if (_localHoveredIndex == widget.items.length &&
-                          widget.footer != null) {
-                        widget.onSelected(widget.footer!.value);
-                      } else {
-                        widget
-                            .onSelected(widget.items[_localHoveredIndex].value);
-                      }
-                      widget.onClose();
-                    } else {
-                      setState(() => _localHoveredIndex = -1);
-                    }
-                  },
-                  onPanCancel: () => setState(() => _localHoveredIndex = -1),
-                  child: SingleMotionBuilder(
-                    motion: const CupertinoMotion.bouncy(extraBounce: 0.25),
-                    value: _scale,
-                    builder: (context, scale, child) {
-                      return Transform.scale(
-                        scale: scale,
-                        alignment: position.spawnUpward
-                            ? Alignment.bottomCenter
-                            : Alignment.topCenter,
-                        child: AnimatedOpacity(
-                          opacity: _opacity,
-                          duration: const Duration(milliseconds: 150),
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  physics: const ClampingScrollPhysics(),
+                  child: SizedBox(
+                    height: media.size.height + position.shiftAmount,
+                    child: SingleMotionBuilder(
+                      motion: const CupertinoMotion.bouncy(extraBounce: 0.15),
+                      value: _animationValue,
+                      builder: (context, val, child) {
+                        // Animate from visually unshifted (shiftAmount) to shifted (0)
+                        final translateY = position.shiftAmount * (1.0 - val);
+                        return Transform.translate(
+                          offset: Offset(0, translateY),
                           child: child,
-                        ),
-                      );
-                    },
-                    child: Material(
-                      color: Colors.transparent,
-                      child: Container(
-                        padding: widget.padding,
-                        decoration: BoxDecoration(
-                          color: resolvedBackgroundColor,
-                          borderRadius:
-                              BorderRadius.circular(widget.borderRadius),
-                          boxShadow: widget.shadow ??
-                              const [
-                                BoxShadow(
-                                  color: Color(0x22000000),
-                                  blurRadius: 18,
-                                  offset: Offset(0, 8),
+                        );
+                      },
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Hit testable background for scrolling AND tap-to-close
+                          Positioned.fill(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap:
+                                  widget.isLockedOpen ? widget.onClose : null,
+                              child: const SizedBox.expand(),
+                            ),
+                          ),
+
+                          // Child Replica (Lifting effect)
+                          if (widget.childReplica != null &&
+                              widget.childRect != null)
+                            Positioned(
+                              left: widget.childRect!.left,
+                              top: widget.childRect!.top,
+                              width: widget.childRect!.width,
+                              height: widget.childRect!.height,
+                              child: SingleMotionBuilder(
+                                motion: const CupertinoMotion.bouncy(
+                                    extraBounce: 0.25),
+                                value: _scale > 0.8 ? 1.05 : 1.0,
+                                builder: (context, scale, child) {
+                                  return Transform.scale(
+                                    scale: scale,
+                                    alignment: Alignment.center,
+                                    child: child,
+                                  );
+                                },
+                                child: Material(
+                                  type: MaterialType.transparency,
+                                  child: widget.childReplica!,
                                 ),
-                              ],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            ...List.generate(widget.items.length, (index) {
-                              final item = widget.items[index];
-                              final selected = index == activeHoverIndex;
-                              return _buildMenuItem(item, selected);
-                            }),
-                            if (widget.footer != null) ...[
-                              const Divider(
-                                  height: 17, indent: 6, endIndent: 6),
-                              _buildMenuItem(
-                                widget.footer!,
-                                activeHoverIndex == widget.items.length,
                               ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+                            ),
+
+                          // The Menu
+                          Positioned(
+                            left: position.left,
+                            top: position.top,
+                            width: widget.width,
+                            child: GestureDetector(
+                              onPanDown: (details) =>
+                                  _updateLocalHover(details.localPosition),
+                              onPanUpdate: (details) =>
+                                  _updateLocalHover(details.localPosition),
+                              onPanEnd: (details) {
+                                final totalItems = widget.items.length +
+                                    (widget.footer != null ? 1 : 0);
+                                if (_localHoveredIndex >= 0 &&
+                                    _localHoveredIndex < totalItems) {
+                                  if (_localHoveredIndex ==
+                                          widget.items.length &&
+                                      widget.footer != null) {
+                                    widget.onSelected(widget.footer!.value);
+                                  } else {
+                                    widget.onSelected(
+                                        widget.items[_localHoveredIndex].value);
+                                  }
+                                  widget.onClose();
+                                } else {
+                                  setState(() => _localHoveredIndex = -1);
+                                }
+                              },
+                              onPanCancel: () =>
+                                  setState(() => _localHoveredIndex = -1),
+                              child: SingleMotionBuilder(
+                                motion: const CupertinoMotion.bouncy(
+                                    extraBounce: 0.25),
+                                value: _scale,
+                                builder: (context, scale, child) {
+                                  return Transform.scale(
+                                    scale: scale,
+                                    alignment: Alignment.topCenter,
+                                    child: AnimatedOpacity(
+                                      opacity: _opacity,
+                                      duration:
+                                          const Duration(milliseconds: 150),
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: Container(
+                                    padding: widget.padding,
+                                    decoration: BoxDecoration(
+                                      color: resolvedBackgroundColor,
+                                      borderRadius: BorderRadius.circular(
+                                          widget.borderRadius),
+                                      boxShadow: widget.shadow ??
+                                          const [
+                                            BoxShadow(
+                                              color: Color(0x22000000),
+                                              blurRadius: 18,
+                                              offset: Offset(0, 8),
+                                            ),
+                                          ],
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        ...List.generate(widget.items.length,
+                                            (index) {
+                                          final item = widget.items[index];
+                                          final selected =
+                                              index == activeHoverIndex;
+                                          return _buildMenuItem(item, selected);
+                                        }),
+                                        if (widget.footer != null) ...[
+                                          const Divider(
+                                              height: 17,
+                                              indent: 6,
+                                              endIndent: 6),
+                                          _buildMenuItem(
+                                            widget.footer!,
+                                            activeHoverIndex ==
+                                                widget.items.length,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ], // Ends inner Stack children
+                      ), // Ends inner Stack
+                    ), // Ends SingleMotionBuilder
+                  ), // Ends SizedBox
+                ), // Ends SingleChildScrollView
+              ), // Ends IgnorePointer
+            ), // Ends Positioned.fill
+          ], // Ends outer Stack children
+        ); // Ends outer Stack
+      }, // Ends LayoutBuilder builder
+    ); // Ends LayoutBuilder
   }
 
   Widget _buildMenuItem(GlideMenuItem<T> item, bool selected) {
@@ -287,40 +343,40 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 70),
-        curve: Curves.easeOut,
-        height: widget.itemHeight,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: selected
-              ? (item.isDestructive
-                  ? Colors.redAccent.withValues(alpha: 0.1)
-                  : resolvedHighlightColor)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(widget.itemBorderRadius),
-        ),
-        child: item.child ??
-            Row(
-              children: [
-                if (item.icon != null) ...[
-                  IconTheme(
-                    data: IconThemeData(size: 20, color: color),
-                    child: item.icon!,
-                  ),
-                  const SizedBox(width: 10),
-                ],
-                Expanded(
-                  child: Text(
-                    item.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: effectiveTextStyle?.copyWith(
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                      color: color,
-                    ),
+      curve: Curves.easeOut,
+      height: widget.itemHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: selected
+            ? (item.isDestructive
+                ? Colors.redAccent.withValues(alpha: 0.1)
+                : resolvedHighlightColor)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(widget.itemBorderRadius),
+      ),
+      child: item.child ??
+          Row(
+            children: [
+              if (item.icon != null) ...[
+                IconTheme(
+                  data: IconThemeData(size: 20, color: color),
+                  child: item.icon!,
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: effectiveTextStyle?.copyWith(
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    color: color,
                   ),
                 ),
-              ],
-            ),
-      );
+              ),
+            ],
+          ),
+    );
   }
 }

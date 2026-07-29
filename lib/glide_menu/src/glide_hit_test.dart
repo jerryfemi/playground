@@ -142,19 +142,11 @@ class GlideHitTest {
     final screenWidth = screenSize.width;
     final screenHeight = screenSize.height;
 
-    final safeTop = safePadding.top;
     final safeBottom = safePadding.bottom + keyboardHeight;
     final safeLeft = safePadding.left;
     final safeRight = safePadding.right;
 
     final childBottom = childRect?.bottom ?? pressGlobalPosition.dy;
-    final childTop = childRect?.top ?? pressGlobalPosition.dy;
-
-    final spaceBelow = screenHeight - childBottom - margin - safeBottom;
-    final spaceAbove = childTop - margin - safeTop;
-
-    // If insufficient space below, prefer spawning upward.
-    final spawnUpward = spaceBelow < menuHeight && spaceAbove > spaceBelow;
 
     double menuLeft = 0;
     if (childRect != null) {
@@ -181,19 +173,19 @@ class GlideHitTest {
       );
     }
 
-    double menuTop = spawnUpward
-        ? safeClamp(
-            childTop - menuHeight - anchorGap,
-            margin + safeTop,
-            screenHeight - menuHeight - margin - safeBottom,
-          )
-        : safeClamp(
-            childBottom + anchorGap,
-            margin + safeTop,
-            screenHeight - menuHeight - margin - safeBottom,
-          );
+    // Always attempt to spawn below the child.
+    double menuTop = childBottom + anchorGap;
 
-    return MenuPosition(left: menuLeft, top: menuTop, spawnUpward: spawnUpward);
+    // Calculate how much the menu overflows the bottom of the screen.
+    final maxAllowedBottom = screenHeight - margin - safeBottom;
+    final actualBottom = menuTop + menuHeight;
+
+    double shiftAmount = 0.0;
+    if (actualBottom > maxAllowedBottom) {
+      shiftAmount = actualBottom - maxAllowedBottom;
+    }
+
+    return MenuPosition(left: menuLeft, top: menuTop, shiftAmount: shiftAmount);
   }
 }
 
@@ -201,11 +193,11 @@ class GlideHitTest {
 class MenuPosition {
   final double left;
   final double top;
-  final bool spawnUpward;
+  final double shiftAmount;
 
   const MenuPosition({
     required this.left,
     required this.top,
-    required this.spawnUpward,
+    required this.shiftAmount,
   });
 }
