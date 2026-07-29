@@ -17,6 +17,7 @@ class MyApp extends StatelessWidget {
       ),
       debugShowCheckedModeBanner: false,
       home: const DemoPage(),
+      themeMode: ThemeMode.dark,
     );
   }
 }

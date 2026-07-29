@@ -34,6 +34,7 @@ class GlideMenu<T> extends StatefulWidget {
     this.anchorGap = 8,
     this.highlightColor,
     this.backgroundColor,
+    this.textStyle,
     this.borderRadius = 24,
     this.itemBorderRadius = 24,
     this.enableHaptics = true,
@@ -73,6 +74,9 @@ class GlideMenu<T> extends StatefulWidget {
 
   /// The background color of the menu. Defaults to Theme surface color.
   final Color? backgroundColor;
+
+  /// The text style for menu items. Defaults to Theme bodyMedium.
+  final TextStyle? textStyle;
 
   /// Corner radius of the entire menu container.
   final double borderRadius;
@@ -148,6 +152,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
           pressGlobalPosition: _pressGlobalPosition,
           margin: widget.margin,
           anchorGap: widget.anchorGap,
+          textStyle: widget.textStyle,
           width: widget.menuWidth,
           itemHeight: widget.itemHeight,
           items: widget.items,
