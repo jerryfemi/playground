@@ -180,12 +180,32 @@ class GlideHitTest {
     final maxAllowedBottom = screenHeight - margin - safeBottom;
     final actualBottom = menuTop + menuHeight;
 
-    double shiftAmount = 0.0;
+    double pushUpAmount = 0.0;
+    double scrollHeight = screenHeight;
+
     if (actualBottom > maxAllowedBottom) {
-      shiftAmount = actualBottom - maxAllowedBottom;
+      double requiredShift = actualBottom - maxAllowedBottom;
+      
+      // Calculate how high we can push the child before it hits the top safe area
+      double childTop = childRect?.top ?? pressGlobalPosition.dy;
+      double maxPushUp = childTop - safePadding.top - margin;
+      
+      if (maxPushUp < 0) maxPushUp = 0; // Don't push down
+      
+      pushUpAmount = requiredShift > maxPushUp ? maxPushUp : requiredShift;
+      
+      if (requiredShift > pushUpAmount) {
+        // The menu still overflows after maximum push up, expand the scroll canvas!
+        scrollHeight = screenHeight + (requiredShift - pushUpAmount);
+      }
     }
 
-    return MenuPosition(left: menuLeft, top: menuTop, shiftAmount: shiftAmount);
+    return MenuPosition(
+      left: menuLeft, 
+      top: menuTop, 
+      pushUpAmount: pushUpAmount,
+      scrollHeight: scrollHeight,
+    );
   }
 }
 
@@ -193,11 +213,13 @@ class GlideHitTest {
 class MenuPosition {
   final double left;
   final double top;
-  final double shiftAmount;
+  final double pushUpAmount;
+  final double scrollHeight;
 
   const MenuPosition({
     required this.left,
     required this.top,
-    required this.shiftAmount,
+    required this.pushUpAmount,
+    required this.scrollHeight,
   });
 }

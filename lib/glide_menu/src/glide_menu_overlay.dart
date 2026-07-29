@@ -153,7 +153,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
         );
 
         _scrollController ??=
-            ScrollController(initialScrollOffset: position.shiftAmount);
+            ScrollController(initialScrollOffset: position.pushUpAmount);
 
         return Stack(
           children: [
@@ -174,13 +174,13 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                   controller: _scrollController,
                   physics: const ClampingScrollPhysics(),
                   child: SizedBox(
-                    height: media.size.height + position.shiftAmount,
+                    height: position.scrollHeight + position.pushUpAmount,
                     child: SingleMotionBuilder(
                       motion: const CupertinoMotion.bouncy(extraBounce: 0.1),
                       value: _animationValue,
                       builder: (context, val, child) {
                         // Animate from visually unshifted (shiftAmount) to shifted (0)
-                        final translateY = position.shiftAmount * (1.0 - val);
+                        final translateY = position.pushUpAmount * (1.0 - val);
                         return Transform.translate(
                           offset: Offset(0, translateY),
                           child: child,
