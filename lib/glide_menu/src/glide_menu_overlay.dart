@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:motor/motor.dart';
 
 import 'glide_menu_item.dart';
+import 'glide_hit_test.dart';
 
 /// Pure overlay UI for the drag menu.
 ///
@@ -12,8 +13,9 @@ import 'glide_menu_item.dart';
 class GlideMenuOverlay<T> extends StatefulWidget {
   const GlideMenuOverlay({
     super.key,
-    required this.left,
-    required this.top,
+    required this.pressGlobalPosition,
+    required this.margin,
+    required this.anchorGap,
     required this.width,
     required this.itemHeight,
     required this.items,
@@ -34,8 +36,9 @@ class GlideMenuOverlay<T> extends StatefulWidget {
     this.textStyle,
   });
 
-  final double left;
-  final double top;
+  final Offset pressGlobalPosition;
+  final double margin;
+  final double anchorGap;
   final double width;
   final double itemHeight;
   final List<GlideMenuItem<T>> items;
@@ -61,9 +64,17 @@ class GlideMenuOverlay<T> extends StatefulWidget {
 }
 
 class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
-  double _scale = 0.8;
+  double _scale = 0.7;
   double _opacity = 0.0;
+  double _animationValue = 0.0;
   int _localHoveredIndex = -1;
+  ScrollController? _scrollController;
+
+  @override
+  void dispose() {
+    _scrollController?.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -74,6 +85,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
         setState(() {
           _scale = 1.0;
           _opacity = 1.0;
+          _animationValue = 1.0;
         });
       }
     });
@@ -85,30 +97,22 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
     if (widget.isClosing && !oldWidget.isClosing) {
       // Trigger reverse animation
       setState(() {
-        _scale = 0.8;
+        _scale = 0.7;
         _opacity = 0.0;
+        _animationValue = 0.0;
       });
     }
   }
 
   void _updateLocalHover(Offset localPosition) {
-    final dy = localPosition.dy - widget.padding.top;
-    int newIndex = -1;
-
-    // We account for the divider height (1px + 16px padding = 17px) when calculating footer intersection
-    if (dy >= 0 && localPosition.dx >= 0 && localPosition.dx <= widget.width) {
-      if (widget.footer != null &&
-          dy > (widget.items.length * widget.itemHeight)) {
-        if (dy > (widget.items.length * widget.itemHeight) + 17) {
-          newIndex = widget.items.length;
-        }
-      } else {
-        newIndex = (dy / widget.itemHeight).floor();
-        if (newIndex >= widget.items.length) {
-          newIndex = -1;
-        }
-      }
-    }
+    final newIndex = GlideHitTest.indexFromLocal(
+      localPosition: localPosition,
+      menuWidth: widget.width,
+      paddingTop: widget.padding.top,
+      itemHeight: widget.itemHeight,
+      itemCount: widget.items.length,
+      hasFooter: widget.footer != null,
+    );
 
     if (newIndex != _localHoveredIndex) {
       setState(() => _localHoveredIndex = newIndex);
@@ -126,135 +130,205 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
     final activeHoverIndex =
         widget.isLockedOpen ? _localHoveredIndex : widget.highlightedIndex;
 
-    return Stack(
-      children: [
-        // Dimmed background
-        Positioned.fill(
-          child: GestureDetector(
-            onTap: widget.isLockedOpen ? widget.onClose : null,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 150),
-              opacity: _opacity,
-              child: Container(color: Colors.black26),
-            ),
-          ),
-        ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final media = MediaQuery.of(context);
 
-        // Child Replica (Lifting effect)
-        if (widget.childReplica != null && widget.childRect != null)
-          Positioned(
-            left: widget.childRect!.left,
-            top: widget.childRect!.top,
-            width: widget.childRect!.width,
-            height: widget.childRect!.height,
-            child: SingleMotionBuilder(
-              motion: const CupertinoMotion.bouncy(extraBounce: 0.25),
-              value: _scale > 0.8 ? 1.05 : 1.0, // Scale up slightly to "lift"
-              builder: (context, scale, child) {
-                return Transform.scale(
-                  scale: scale,
-                  alignment: Alignment.center,
-                  child: child,
-                );
-              },
-              child: Material(
-                type: MaterialType.transparency,
-                child: widget.childReplica!,
+        final menuHeight = GlideHitTest.menuHeight(
+          itemCount: widget.items.length,
+          itemHeight: widget.itemHeight,
+          hasFooter: widget.footer != null,
+        );
+
+        final position = GlideHitTest.calculateMenuPosition(
+          screenSize: media.size,
+          safePadding: media.padding,
+          keyboardHeight: media.viewInsets.bottom,
+          childRect: widget.childRect,
+          pressGlobalPosition: widget.pressGlobalPosition,
+          menuWidth: widget.width,
+          menuHeight: menuHeight,
+          margin: widget.margin,
+          anchorGap: widget.anchorGap,
+        );
+
+        _scrollController ??=
+            ScrollController(initialScrollOffset: position.shiftAmount);
+
+        return Stack(
+          children: [
+            // Fixed Dimmed background (not hit testable)
+            Positioned.fill(
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 150),
+                opacity: _opacity,
+                child: Container(color: Colors.black26),
               ),
             ),
-          ),
 
-        // The Menu
-        Positioned(
-          left: widget.left,
-          top: widget.top,
-          width: widget.width,
-          child: IgnorePointer(
-            ignoring: !widget.isLockedOpen,
-            child: GestureDetector(
-              onPanDown: (details) => _updateLocalHover(details.localPosition),
-              onPanUpdate: (details) =>
-                  _updateLocalHover(details.localPosition),
-              onPanEnd: (details) {
-                final totalItems =
-                    widget.items.length + (widget.footer != null ? 1 : 0);
-                if (_localHoveredIndex >= 0 &&
-                    _localHoveredIndex < totalItems) {
-                  if (_localHoveredIndex == widget.items.length &&
-                      widget.footer != null) {
-                    widget.onSelected(widget.footer!.value);
-                  } else {
-                    widget.onSelected(widget.items[_localHoveredIndex].value);
-                  }
-                  widget.onClose();
-                } else {
-                  setState(() => _localHoveredIndex = -1);
-                }
-              },
-              onPanCancel: () => setState(() => _localHoveredIndex = -1),
-              child: SingleMotionBuilder(
-                motion: const CupertinoMotion.bouncy(extraBounce: 0.25),
-                value: _scale,
-                builder: (context, scale, child) {
-                  // If the menu is rendered ABOVE the child, it should spring up from its bottom.
-                  // If the menu is rendered BELOW the child, it should spring down from its top.
-                  final bool isAboveChild =
-                      widget.top < (widget.childRect?.top ?? 0);
-
-                  return Transform.scale(
-                    scale: scale,
-                    alignment: isAboveChild
-                        ? Alignment.bottomCenter
-                        : Alignment.topCenter,
-                    child: AnimatedOpacity(
-                      opacity: _opacity,
-                      duration: const Duration(milliseconds: 150),
-                      child: child,
-                    ),
-                  );
-                },
-                child: Material(
-                  color: Colors.transparent,
-                  child: Container(
-                    padding: widget.padding,
-                    decoration: BoxDecoration(
-                      color: resolvedBackgroundColor,
-                      borderRadius: BorderRadius.circular(widget.borderRadius),
-                      boxShadow: widget.shadow ??
-                          const [
-                            BoxShadow(
-                              color: Color(0x22000000),
-                              blurRadius: 18,
-                              offset: Offset(0, 8),
+            // Scrolling content canvas
+            Positioned.fill(
+              child: IgnorePointer(
+                ignoring: !widget.isLockedOpen,
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  physics: const ClampingScrollPhysics(),
+                  child: SizedBox(
+                    height: media.size.height + position.shiftAmount,
+                    child: SingleMotionBuilder(
+                      motion: const CupertinoMotion.bouncy(extraBounce: 0.1),
+                      value: _animationValue,
+                      builder: (context, val, child) {
+                        // Animate from visually unshifted (shiftAmount) to shifted (0)
+                        final translateY = position.shiftAmount * (1.0 - val);
+                        return Transform.translate(
+                          offset: Offset(0, translateY),
+                          child: child,
+                        );
+                      },
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Hit testable background for scrolling AND tap-to-close
+                          Positioned.fill(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap:
+                                  widget.isLockedOpen ? widget.onClose : null,
+                              child: const SizedBox.expand(),
                             ),
-                          ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        ...List.generate(widget.items.length, (index) {
-                          final item = widget.items[index];
-                          final selected = index == activeHoverIndex;
-                          return _buildMenuItem(item, selected);
-                        }),
-                        if (widget.footer != null) ...[
-                          const Divider(height: 17, indent: 6, endIndent: 6),
-                          _buildMenuItem(
-                            widget.footer!,
-                            activeHoverIndex == widget.items.length,
                           ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
+
+                          // Child Replica (Lifting effect)
+                          if (widget.childReplica != null &&
+                              widget.childRect != null)
+                            Positioned(
+                              left: widget.childRect!.left,
+                              top: widget.childRect!.top,
+                              width: widget.childRect!.width,
+                              height: widget.childRect!.height,
+                              child: SingleMotionBuilder(
+                                motion: const CupertinoMotion.bouncy(
+                                    extraBounce: 0.1),
+                                value: _animationValue == 1.0 ? 1.05 : 0.95,
+                                builder: (context, scale, child) {
+                                  return Transform.scale(
+                                    scale: scale,
+                                    alignment: Alignment.center,
+                                    child: child,
+                                  );
+                                },
+                                child: Material(
+                                  type: MaterialType.transparency,
+                                  child: widget.childReplica!,
+                                ),
+                              ),
+                            ),
+
+                          // The Menu
+                          Positioned(
+                            left: position.left,
+                            top: position.top,
+                            width: widget.width,
+                            child: GestureDetector(
+                              onPanDown: (details) =>
+                                  _updateLocalHover(details.localPosition),
+                              onPanUpdate: (details) =>
+                                  _updateLocalHover(details.localPosition),
+                              onPanEnd: (details) {
+                                final totalItems = widget.items.length +
+                                    (widget.footer != null ? 1 : 0);
+                                if (_localHoveredIndex >= 0 &&
+                                    _localHoveredIndex < totalItems) {
+                                  if (_localHoveredIndex ==
+                                          widget.items.length &&
+                                      widget.footer != null) {
+                                    widget.onSelected(widget.footer!.value);
+                                  } else {
+                                    widget.onSelected(
+                                        widget.items[_localHoveredIndex].value);
+                                  }
+                                  widget.onClose();
+                                } else {
+                                  setState(() => _localHoveredIndex = -1);
+                                }
+                              },
+                              onPanCancel: () =>
+                                  setState(() => _localHoveredIndex = -1),
+                              child: SingleMotionBuilder(
+                                motion: const CupertinoMotion.bouncy(
+                                    extraBounce: 0.1),
+                                value: _scale,
+                                builder: (context, scale, child) {
+                                  return Transform.scale(
+                                    scale: scale,
+                                    alignment: Alignment.topCenter,
+                                    child: AnimatedOpacity(
+                                      opacity: _opacity,
+                                      duration:
+                                          const Duration(milliseconds: 150),
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: Container(
+                                    padding: widget.padding,
+                                    decoration: BoxDecoration(
+                                      color: resolvedBackgroundColor,
+                                      borderRadius: BorderRadius.circular(
+                                          widget.borderRadius),
+                                      boxShadow: widget.shadow ??
+                                          const [
+                                            BoxShadow(
+                                              color: Color(0x22000000),
+                                              blurRadius: 18,
+                                              offset: Offset(0, 8),
+                                            ),
+                                          ],
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        ...List.generate(widget.items.length,
+                                            (index) {
+                                          final item = widget.items[index];
+                                          final selected =
+                                              index == activeHoverIndex;
+                                          return _buildMenuItem(item, selected);
+                                        }),
+                                        if (widget.footer != null) ...[
+                                          const Divider(
+                                              height: 17,
+                                              indent: 6,
+                                              endIndent: 6),
+                                          _buildMenuItem(
+                                            widget.footer!,
+                                            activeHoverIndex ==
+                                                widget.items.length,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ], // Ends inner Stack children
+                      ), // Ends inner Stack
+                    ), // Ends SingleMotionBuilder
+                  ), // Ends SizedBox
+                ), // Ends SingleChildScrollView
+              ), // Ends IgnorePointer
+            ), // Ends Positioned.fill
+          ], // Ends outer Stack children
+        ); // Ends outer Stack
+      }, // Ends LayoutBuilder builder
+    ); // Ends LayoutBuilder
   }
 
   Widget _buildMenuItem(GlideMenuItem<T> item, bool selected) {
@@ -267,51 +341,42 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
     final resolvedHighlightColor = widget.highlightColor ??
         Theme.of(context).colorScheme.primary.withValues(alpha: 0.08);
 
-    return GestureDetector(
-      onTap: widget.isLockedOpen
-          ? () {
-              widget.onSelected(item.value);
-              widget.onClose();
-            }
-          : null,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 70),
-        curve: Curves.easeOut,
-        height: widget.itemHeight,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: selected
-              ? (item.isDestructive
-                  ? Colors.redAccent.withValues(alpha: 0.1)
-                  : resolvedHighlightColor)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(widget.itemBorderRadius),
-        ),
-        child: item.child ??
-            Row(
-              children: [
-                if (item.icon != null) ...[
-                  IconTheme(
-                    data: IconThemeData(size: 20, color: color),
-                    child: item.icon!,
-                  ),
-                  const SizedBox(width: 10),
-                ],
-                Expanded(
-                  child: Text(
-                    item.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: effectiveTextStyle?.copyWith(
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                      color: color,
-                    ),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 70),
+      curve: Curves.easeOut,
+      height: widget.itemHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: selected
+            ? (item.isDestructive
+                ? Colors.redAccent.withValues(alpha: 0.1)
+                : resolvedHighlightColor)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(widget.itemBorderRadius),
+      ),
+      child: item.child ??
+          Row(
+            children: [
+              if (item.icon != null) ...[
+                IconTheme(
+                  data: IconThemeData(size: 20, color: color),
+                  child: item.icon!,
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: effectiveTextStyle?.copyWith(
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    color: color,
                   ),
                 ),
-              ],
-            ),
-      ),
+              ),
+            ],
+          ),
     );
   }
 }

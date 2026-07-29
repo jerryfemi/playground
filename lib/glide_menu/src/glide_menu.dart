@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'glide_menu_overlay.dart';
 import 'glide_menu_item.dart';
+import 'glide_hit_test.dart';
 
 export 'glide_menu_overlay.dart';
 export 'glide_menu_item.dart';
+export 'glide_hit_test.dart';
 
 /// Continuous drag menu with spring-like interaction.
 ///
@@ -35,7 +38,8 @@ class GlideMenu<T> extends StatefulWidget {
     this.itemBorderRadius = 24,
     this.enableHaptics = true,
     this.initialIndex = 0,
-  });
+  }) : assert(items.length > 0 || footer != null,
+            'GlideMenu requires at least one item or a footer.');
 
   /// The widget that the user long-presses to open the menu.
   final Widget child;
@@ -89,49 +93,48 @@ class GlideMenu<T> extends StatefulWidget {
 class _GlideMenuState<T> extends State<GlideMenu<T>> {
   OverlayEntry? _overlayEntry;
 
-  int _hoveredIndex = -1;
+  Rect? _childRect;
+  Offset _pressGlobalPosition = Offset.zero;
+
   bool _isLockedOpen = false;
   bool _isClosing = false;
+  bool _isPressedDown = false;
+  int _hoveredIndex = -1;
 
-  Offset? _pressGlobalPosition;
-  Rect? _childRect;
-  bool _spawnUpward = false;
+  MenuPosition? _initialPosition;
 
-  double _menuLeft = 0;
-  double _menuTop = 0;
-
-  double get _menuHeight {
-    double h = widget.items.length * widget.itemHeight + 16;
-    if (widget.footer != null) {
-      h += widget.itemHeight + 17; // itemHeight + 1px divider + 16px padding
-    }
-    return h;
-  }
+  Timer? _closeTimer;
 
   @override
   void dispose() {
-    _removeOverlay();
+    _closeTimer?.cancel();
+    // During dispose, skip the exit animation (nobody sees it)
+    // and remove the overlay synchronously.
+    _overlayEntry?.remove();
+    _overlayEntry = null;
     super.dispose();
   }
 
-  void _removeOverlay() async {
+  void _removeOverlay({VoidCallback? onClosed}) {
     if (_overlayEntry == null || _isClosing) return;
 
     // Trigger closing animation in the overlay
     _isClosing = true;
     _markNeedsBuild();
 
-    // Wait for the reverse spring animation (150ms)
-    await Future.delayed(const Duration(milliseconds: 150));
+    // Wait for the reverse spring animation using a cancellable Timer
+    _closeTimer?.cancel();
+    _closeTimer = Timer(const Duration(milliseconds: 150), () {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
 
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-
-    if (mounted) {
-      setState(() {
-        _isClosing = false;
-      }); // Re-show the original child
-    }
+      if (mounted) {
+        setState(() {
+          _isClosing = false;
+        }); // Re-show the original child
+      }
+      onClosed?.call();
+    });
   }
 
   void _markNeedsBuild() {
@@ -142,8 +145,9 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     _overlayEntry = OverlayEntry(
       builder: (context) {
         return GlideMenuOverlay<T>(
-          left: _menuLeft,
-          top: _menuTop,
+          pressGlobalPosition: _pressGlobalPosition,
+          margin: widget.margin,
+          anchorGap: widget.anchorGap,
           width: widget.menuWidth,
           itemHeight: widget.itemHeight,
           items: widget.items,
@@ -159,10 +163,11 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
           childRect: _childRect,
           onSelected: widget.onSelected,
           onClose: () {
-            _removeOverlay();
-            Future.delayed(const Duration(milliseconds: 150), () {
-              if (mounted) _reset();
-            });
+            _removeOverlay(
+              onClosed: () {
+                if (mounted) _reset();
+              },
+            );
           },
         );
       },
@@ -187,50 +192,23 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
       _childRect = position & size;
     }
 
-    // Fetch screen size once — it can't change mid-gesture.
     final media = MediaQuery.of(context);
-    final size = media.size;
 
-    final totalMenuHeight = _menuHeight;
-    final childBottom = _childRect?.bottom ?? details.globalPosition.dy;
-    final childTop = _childRect?.top ?? details.globalPosition.dy;
-
-    final spaceBelow = size.height - childBottom - widget.margin;
-    final spaceAbove = childTop - widget.margin;
-
-    // If insufficient space below, prefer spawning upward.
-    _spawnUpward = spaceBelow < totalMenuHeight && spaceAbove > spaceBelow;
-
-    if (_childRect != null) {
-      // If widget is mostly on the right side of the screen, right-align the menu
-      if (_childRect!.center.dx > size.width / 2) {
-        _menuLeft = (_childRect!.right - widget.menuWidth).clamp(
-          widget.margin,
-          size.width - widget.menuWidth - widget.margin,
-        );
-      } else {
-        // Otherwise left-align
-        _menuLeft = _childRect!.left.clamp(
-          widget.margin,
-          size.width - widget.menuWidth - widget.margin,
-        );
-      }
-    } else {
-      _menuLeft = (details.globalPosition.dx + 12).clamp(
-        widget.margin,
-        size.width - widget.menuWidth - widget.margin,
-      );
-    }
-
-    _menuTop = _spawnUpward
-        ? (childTop - totalMenuHeight - widget.anchorGap).clamp(
-            widget.margin,
-            size.height - totalMenuHeight - widget.margin,
-          )
-        : (childBottom + widget.anchorGap).clamp(
-            widget.margin,
-            size.height - totalMenuHeight - widget.margin,
-          );
+    _initialPosition = GlideHitTest.calculateMenuPosition(
+      screenSize: media.size,
+      safePadding: media.padding,
+      keyboardHeight: media.viewInsets.bottom,
+      childRect: _childRect,
+      pressGlobalPosition: _pressGlobalPosition,
+      menuWidth: widget.menuWidth,
+      menuHeight: GlideHitTest.menuHeight(
+        itemCount: widget.items.length,
+        itemHeight: widget.itemHeight,
+        hasFooter: widget.footer != null,
+      ),
+      margin: widget.margin,
+      anchorGap: widget.anchorGap,
+    );
 
     _showOverlay();
     _markNeedsBuild();
@@ -242,7 +220,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   }
 
   void _handleLongPressMoveUpdate(LongPressMoveUpdateDetails details) {
-    if (_overlayEntry == null || _pressGlobalPosition == null) return;
+    if (_overlayEntry == null) return;
     if (widget.items.isEmpty) return;
 
     final index = _getHoveredIndex(details.globalPosition);
@@ -257,30 +235,16 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   }
 
   int _getHoveredIndex(Offset globalPos) {
-    // 1. Check if X is within the menu horizontally (with a tiny bit of horizontal forgiveness)
-    final dx = globalPos.dx;
-    if (dx < _menuLeft - 20 || dx > _menuLeft + widget.menuWidth + 20) {
-      return -1;
-    }
-
-    // 2. Check if Y intersects a specific item.
-    // The menu container has 8px padding top and bottom (assumed from DragMenuOverlay).
-    final localY = globalPos.dy - _menuTop - 8;
-
-    // If we are above the first item or below the last item
-    if (localY < 0) return -1;
-
-    if (widget.footer != null &&
-        localY > (widget.items.length * widget.itemHeight) + 17) {
-      return widget.items.length; // footer index
-    }
-
-    final index = (localY / widget.itemHeight).floor();
-    if (index >= 0 && index < widget.items.length) {
-      return index;
-    }
-
-    return -1;
+    if (_initialPosition == null) return -1;
+    return GlideHitTest.indexFromGlobal(
+      globalPosition: globalPos,
+      menuLeft: _initialPosition!.left,
+      menuTop: _initialPosition!.top - _initialPosition!.shiftAmount,
+      menuWidth: widget.menuWidth,
+      itemHeight: widget.itemHeight,
+      itemCount: widget.items.length,
+      hasFooter: widget.footer != null,
+    );
   }
 
   void _handleLongPressEnd(LongPressEndDetails details) {
@@ -292,12 +256,11 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
       } else {
         widget.onSelected(widget.items[_hoveredIndex].value);
       }
-      _removeOverlay();
-
-      // Delay reset so the highlight doesn't disappear during the out-animation
-      Future.delayed(const Duration(milliseconds: 150), () {
-        if (mounted) _reset();
-      });
+      _removeOverlay(
+        onClosed: () {
+          if (mounted) _reset();
+        },
+      );
     } else {
       // Didn't select anything via dragging, or just lifted finger. Lock it open!
       _isLockedOpen = true;
@@ -314,11 +277,9 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   void _reset() {
     _hoveredIndex = -1;
     _isLockedOpen = false;
-    _pressGlobalPosition = null;
+    _pressGlobalPosition = Offset.zero;
     _childRect = null;
-    _spawnUpward = false;
-    _menuLeft = 0;
-    _menuTop = 0;
+    _initialPosition = null;
     if (mounted) setState(() {});
   }
 
@@ -326,13 +287,21 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _isPressedDown = true),
+      onTapUp: (_) => setState(() => _isPressedDown = false),
+      onTapCancel: () => setState(() => _isPressedDown = false),
       onLongPressStart: _handleLongPressStart,
       onLongPressMoveUpdate: _handleLongPressMoveUpdate,
       onLongPressEnd: _handleLongPressEnd,
       onLongPressCancel: _handleLongPressCancel,
-      child: Opacity(
-        opacity: _overlayEntry != null ? 0.0 : 1.0,
-        child: widget.child,
+      child: AnimatedScale(
+        scale: _isPressedDown ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        child: Opacity(
+          opacity: _overlayEntry != null ? 0.0 : 1.0,
+          child: widget.child,
+        ),
       ),
     );
   }
