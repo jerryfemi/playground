@@ -123,7 +123,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final media = MediaQuery.of(context);
-        
+
         final menuHeight = GlideHitTest.menuHeight(
           itemCount: widget.items.length,
           itemHeight: widget.itemHeight,
@@ -165,7 +165,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                 height: widget.childRect!.height,
                 child: SingleMotionBuilder(
                   motion: const CupertinoMotion.bouncy(extraBounce: 0.25),
-                  value: _scale > 0.8 ? 1.05 : 1.0, // Scale up slightly to "lift"
+                  value:
+                      _scale > 0.8 ? 1.05 : 1.0, // Scale up slightly to "lift"
                   builder: (context, scale, child) {
                     return Transform.scale(
                       scale: scale,
@@ -188,7 +189,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
               child: IgnorePointer(
                 ignoring: !widget.isLockedOpen,
                 child: GestureDetector(
-                  onPanDown: (details) => _updateLocalHover(details.localPosition),
+                  onPanDown: (details) =>
+                      _updateLocalHover(details.localPosition),
                   onPanUpdate: (details) =>
                       _updateLocalHover(details.localPosition),
                   onPanEnd: (details) {
@@ -200,7 +202,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                           widget.footer != null) {
                         widget.onSelected(widget.footer!.value);
                       } else {
-                        widget.onSelected(widget.items[_localHoveredIndex].value);
+                        widget
+                            .onSelected(widget.items[_localHoveredIndex].value);
                       }
                       widget.onClose();
                     } else {
@@ -230,7 +233,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                         padding: widget.padding,
                         decoration: BoxDecoration(
                           color: resolvedBackgroundColor,
-                          borderRadius: BorderRadius.circular(widget.borderRadius),
+                          borderRadius:
+                              BorderRadius.circular(widget.borderRadius),
                           boxShadow: widget.shadow ??
                               const [
                                 BoxShadow(
@@ -250,7 +254,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                               return _buildMenuItem(item, selected);
                             }),
                             if (widget.footer != null) ...[
-                              const Divider(height: 17, indent: 6, endIndent: 6),
+                              const Divider(
+                                  height: 17, indent: 6, endIndent: 6),
                               _buildMenuItem(
                                 widget.footer!,
                                 activeHoverIndex == widget.items.length,
@@ -280,16 +285,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
     final resolvedHighlightColor = widget.highlightColor ??
         Theme.of(context).colorScheme.primary.withValues(alpha: 0.08);
 
-    return GestureDetector(
-      onTap: widget.isLockedOpen
-          ? () {
-              widget.onSelected(item.value);
-              widget.onClose();
-            }
-          : null,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 70),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 70),
         curve: Curves.easeOut,
         height: widget.itemHeight,
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -324,7 +321,6 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                 ),
               ],
             ),
-      ),
-    );
+      );
   }
 }
