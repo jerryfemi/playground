@@ -98,6 +98,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
 
   bool _isLockedOpen = false;
   bool _isClosing = false;
+  bool _isPressedDown = false;
   int _hoveredIndex = -1;
 
   MenuPosition? _initialPosition;
@@ -192,7 +193,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     }
 
     final media = MediaQuery.of(context);
-    
+
     _initialPosition = GlideHitTest.calculateMenuPosition(
       screenSize: media.size,
       safePadding: media.padding,
@@ -286,13 +287,21 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _isPressedDown = true),
+      onTapUp: (_) => setState(() => _isPressedDown = false),
+      onTapCancel: () => setState(() => _isPressedDown = false),
       onLongPressStart: _handleLongPressStart,
       onLongPressMoveUpdate: _handleLongPressMoveUpdate,
       onLongPressEnd: _handleLongPressEnd,
       onLongPressCancel: _handleLongPressCancel,
-      child: Opacity(
-        opacity: _overlayEntry != null ? 0.0 : 1.0,
-        child: widget.child,
+      child: AnimatedScale(
+        scale: _isPressedDown ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        child: Opacity(
+          opacity: _overlayEntry != null ? 0.0 : 1.0,
+          child: widget.child,
+        ),
       ),
     );
   }

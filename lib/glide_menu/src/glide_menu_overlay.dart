@@ -64,7 +64,7 @@ class GlideMenuOverlay<T> extends StatefulWidget {
 }
 
 class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
-  double _scale = 0.8;
+  double _scale = 0.7;
   double _opacity = 0.0;
   double _animationValue = 0.0;
   int _localHoveredIndex = -1;
@@ -97,7 +97,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
     if (widget.isClosing && !oldWidget.isClosing) {
       // Trigger reverse animation
       setState(() {
-        _scale = 0.8;
+        _scale = 0.7;
         _opacity = 0.0;
         _animationValue = 0.0;
       });
@@ -176,7 +176,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                   child: SizedBox(
                     height: media.size.height + position.shiftAmount,
                     child: SingleMotionBuilder(
-                      motion: const CupertinoMotion.bouncy(extraBounce: 0.15),
+                      motion: const CupertinoMotion.bouncy(extraBounce: 0.1),
                       value: _animationValue,
                       builder: (context, val, child) {
                         // Animate from visually unshifted (shiftAmount) to shifted (0)
@@ -209,8 +209,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                               height: widget.childRect!.height,
                               child: SingleMotionBuilder(
                                 motion: const CupertinoMotion.bouncy(
-                                    extraBounce: 0.25),
-                                value: _scale > 0.8 ? 1.05 : 1.0,
+                                    extraBounce: 0.1),
+                                value: _animationValue == 1.0 ? 1.05 : 0.95,
                                 builder: (context, scale, child) {
                                   return Transform.scale(
                                     scale: scale,
@@ -257,7 +257,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                   setState(() => _localHoveredIndex = -1),
                               child: SingleMotionBuilder(
                                 motion: const CupertinoMotion.bouncy(
-                                    extraBounce: 0.25),
+                                    extraBounce: 0.1),
                                 value: _scale,
                                 builder: (context, scale, child) {
                                   return Transform.scale(
