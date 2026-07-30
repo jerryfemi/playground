@@ -67,8 +67,8 @@ class GlideMenu<T> extends StatefulWidget {
     this.itemBorderRadius = 24,
     this.enableHaptics = true,
     this.controller,
-  }) : _isButtonMode = false,
-       assert(items.length > 0 || footer != null,
+  })  : _isButtonMode = false,
+        assert(items.length > 0 || footer != null,
             'GlideMenu requires at least one item or a footer.');
 
   /// Creates a tap-to-open dropdown menu without child replica or scrub phase.
@@ -93,8 +93,8 @@ class GlideMenu<T> extends StatefulWidget {
     this.itemBorderRadius = 24,
     this.enableHaptics = true,
     this.controller,
-  }) : _isButtonMode = true,
-       assert(items.length > 0 || footer != null,
+  })  : _isButtonMode = true,
+        assert(items.length > 0 || footer != null,
             'GlideMenu requires at least one item or a footer.');
 
   /// The widget that the user long-presses to open the menu.
@@ -152,7 +152,7 @@ class GlideMenu<T> extends StatefulWidget {
 class _GlideMenuState<T> extends State<GlideMenu<T>> {
   /// Global lock: only one GlideMenu can be open at a time across the entire app.
   static _GlideMenuState? _openMenuState;
-  
+
   bool get _ownsLock => _openMenuState == this;
 
   OverlayEntry? _overlayEntry;
@@ -193,12 +193,12 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     // and remove the overlay synchronously.
     _overlayEntry?.remove();
     _overlayEntry = null;
-    
+
     // Release the global lock if we own it
     if (_ownsLock) {
       _openMenuState = null;
     }
-    
+
     super.dispose();
   }
 
@@ -370,11 +370,11 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     _hoveredIndex = -1;
     _isLockedOpen = false;
     _showChildReplica = true;
-    
+
     if (_ownsLock) {
       _openMenuState = null;
     }
-    
+
     _pressGlobalPosition = Offset.zero;
     _childRect = null;
     _initialPosition = null;

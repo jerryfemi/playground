@@ -1,7 +1,7 @@
 # GlideMenu
 
 <div align="center">
-  <img width="240" height="426" alt="GlideMenu Demo" src="https://github.com/user-attachments/assets/79bc6ded-017b-4d31-9ba3-4631d6b75aa9" />
+  <img width="240" height="404" alt="Image" src="https://github.com/user-attachments/assets/90f2a29c-9278-48b1-b898-955a469c55d9" />
 </div>
 
 A fluid, continuous drag-to-select context menu and spring button package for Flutter. 
@@ -127,17 +127,3 @@ A standalone, bouncy button that scales down on press with configurable friction
 
 ```dart
 import 'package:playground/glide_menu/glide_menu.dart';
-
-SpringButton(
-  onTap: () => print('Bounced!'),
-  dragFriction: 19.0, // Higher value means less drag distance
-  child: Container(
-    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-    decoration: BoxDecoration(
-      color: Colors.black,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: const Text('Tap Me', style: TextStyle(color: Colors.white)),
-  ),
-)
-```
