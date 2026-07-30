@@ -59,7 +59,6 @@ class GlideMenu<T> extends StatefulWidget {
     this.itemHeight = 35,
     this.menuWidth = 180,
     this.margin = 12,
-    this.deadZone = 10,
     this.anchorGap = 8,
     this.highlightColor,
     this.backgroundColor,
@@ -67,7 +66,6 @@ class GlideMenu<T> extends StatefulWidget {
     this.borderRadius = 24,
     this.itemBorderRadius = 24,
     this.enableHaptics = true,
-    this.initialIndex = 0,
     this.controller,
   }) : _isButtonMode = false,
        assert(items.length > 0 || footer != null,
@@ -87,7 +85,6 @@ class GlideMenu<T> extends StatefulWidget {
     this.itemHeight = 35,
     this.menuWidth = 180,
     this.margin = 12,
-    this.deadZone = 10,
     this.anchorGap = 8,
     this.highlightColor,
     this.backgroundColor,
@@ -95,7 +92,6 @@ class GlideMenu<T> extends StatefulWidget {
     this.borderRadius = 24,
     this.itemBorderRadius = 24,
     this.enableHaptics = true,
-    this.initialIndex = 0,
     this.controller,
   }) : _isButtonMode = true,
        assert(items.length > 0 || footer != null,
@@ -122,9 +118,6 @@ class GlideMenu<T> extends StatefulWidget {
   /// Minimum screen margin for placement.
   final double margin;
 
-  /// Small movement buffer before selection starts changing.
-  final double deadZone;
-
   /// Gap between finger position and menu.
   final double anchorGap;
 
@@ -146,9 +139,6 @@ class GlideMenu<T> extends StatefulWidget {
   /// If true, triggers haptic feedback during interactions.
   final bool enableHaptics;
 
-  /// Initial highlighted item when menu appears.
-  final int initialIndex;
-
   /// Optional controller for programmatic open/close.
   final GlideMenuController? controller;
 
@@ -161,7 +151,9 @@ class GlideMenu<T> extends StatefulWidget {
 
 class _GlideMenuState<T> extends State<GlideMenu<T>> {
   /// Global lock: only one GlideMenu can be open at a time across the entire app.
-  static bool _isAnyMenuOpen = false;
+  static _GlideMenuState? _openMenuState;
+  
+  bool get _ownsLock => _openMenuState == this;
 
   OverlayEntry? _overlayEntry;
 
@@ -201,6 +193,12 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     // and remove the overlay synchronously.
     _overlayEntry?.remove();
     _overlayEntry = null;
+    
+    // Release the global lock if we own it
+    if (_ownsLock) {
+      _openMenuState = null;
+    }
+    
     super.dispose();
   }
 
@@ -266,13 +264,13 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     );
 
     Overlay.of(context, rootOverlay: true).insert(_overlayEntry!);
-    _isAnyMenuOpen = true;
+    _openMenuState = this;
     setState(() {}); // Trigger rebuild to update child visibility
   }
 
   void _handleLongPressStart(LongPressStartDetails details) {
     if (!mounted || widget.items.isEmpty) return;
-    if (_isAnyMenuOpen) return; // Another menu is already open
+    if (_openMenuState != null) return; // Another menu is already open
 
     _pressGlobalPosition = details.globalPosition;
     _hoveredIndex = -1; // Start unhovered until they drag into the menu bounds
@@ -333,7 +331,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     return GlideHitTest.indexFromGlobal(
       globalPosition: globalPos,
       menuLeft: _initialPosition!.left,
-      menuTop: _initialPosition!.top,
+      menuTop: _initialPosition!.top - _initialPosition!.pushUpAmount,
       menuWidth: widget.menuWidth,
       itemHeight: widget.itemHeight,
       itemCount: widget.items.length,
@@ -372,7 +370,11 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     _hoveredIndex = -1;
     _isLockedOpen = false;
     _showChildReplica = true;
-    _isAnyMenuOpen = false;
+    
+    if (_ownsLock) {
+      _openMenuState = null;
+    }
+    
     _pressGlobalPosition = Offset.zero;
     _childRect = null;
     _initialPosition = null;
@@ -383,7 +385,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   void _openAsButton() {
     if (_overlayEntry != null) return; // Already open
     if (!mounted) return;
-    if (_isAnyMenuOpen) return; // Another menu is already open
+    if (_openMenuState != null) return; // Another menu is already open
 
     // Capture child rect for positioning
     final renderBox = context.findRenderObject() as RenderBox?;
@@ -410,7 +412,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   void _openFromController() {
     if (_overlayEntry != null) return;
     if (!mounted) return;
-    if (_isAnyMenuOpen) return; // Another menu is already open
+    if (_openMenuState != null) return; // Another menu is already open
 
     if (widget._isButtonMode) {
       _openAsButton();
