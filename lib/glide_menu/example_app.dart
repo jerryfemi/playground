@@ -75,8 +75,8 @@ class _DemoPageState extends State<DemoPage> {
           GlideMenu<String>(
             backgroundColor: const Color(0xFF1E293B), // Deep slate
             textStyle: const TextStyle(color: Colors.white, fontSize: 16),
+            menuWidth: 220,
             margin: 16,
-            borderRadius: 26,
             items: const [
               GlideMenuItem(
                   value: 'profile',
@@ -133,7 +133,6 @@ class _DemoPageState extends State<DemoPage> {
           backgroundColor: const Color(0xFF1E293B),
           textStyle: const TextStyle(color: Colors.white, fontSize: 16),
           margin: 16,
-          borderRadius: 16,
           items: const [
             GlideMenuItem(
                 value: 'search',
@@ -184,7 +183,6 @@ class _DemoPageState extends State<DemoPage> {
         backgroundColor: const Color(0xFF1E293B),
         textStyle: const TextStyle(color: Colors.white, fontSize: 16),
         margin: 16,
-        borderRadius: 16,
         items: const [
           GlideMenuItem(
               value: 'reply',
@@ -239,7 +237,6 @@ class _DemoPageState extends State<DemoPage> {
         backgroundColor: const Color(0xFF1E293B),
         textStyle: const TextStyle(color: Colors.white, fontSize: 16),
         margin: 16,
-        borderRadius: 16,
         items: const [
           GlideMenuItem(
               value: 'reply',
@@ -291,10 +288,10 @@ class _DemoPageState extends State<DemoPage> {
     return Align(
       alignment: Alignment.centerRight,
       child: GlideMenu<String>(
+        menuWidth: 220,
         backgroundColor: const Color(0xFF1E293B),
         textStyle: const TextStyle(color: Colors.white, fontSize: 16),
         margin: 16,
-        borderRadius: 16,
         items: List.generate(15, (index) {
           return GlideMenuItem(
             value: 'item_$index',
