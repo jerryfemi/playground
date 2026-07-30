@@ -160,6 +160,9 @@ class GlideMenu<T> extends StatefulWidget {
 }
 
 class _GlideMenuState<T> extends State<GlideMenu<T>> {
+  /// Global lock: only one GlideMenu can be open at a time across the entire app.
+  static bool _isAnyMenuOpen = false;
+
   OverlayEntry? _overlayEntry;
 
   Rect? _childRect;
@@ -263,11 +266,13 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     );
 
     Overlay.of(context, rootOverlay: true).insert(_overlayEntry!);
+    _isAnyMenuOpen = true;
     setState(() {}); // Trigger rebuild to update child visibility
   }
 
   void _handleLongPressStart(LongPressStartDetails details) {
     if (!mounted || widget.items.isEmpty) return;
+    if (_isAnyMenuOpen) return; // Another menu is already open
 
     _pressGlobalPosition = details.globalPosition;
     _hoveredIndex = -1; // Start unhovered until they drag into the menu bounds
@@ -367,6 +372,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     _hoveredIndex = -1;
     _isLockedOpen = false;
     _showChildReplica = true;
+    _isAnyMenuOpen = false;
     _pressGlobalPosition = Offset.zero;
     _childRect = null;
     _initialPosition = null;
@@ -377,14 +383,15 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   void _openAsButton() {
     if (_overlayEntry != null) return; // Already open
     if (!mounted) return;
+    if (_isAnyMenuOpen) return; // Another menu is already open
 
     // Capture child rect for positioning
     final renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox != null) {
-      final size = renderBox.size;
-      final position = renderBox.localToGlobal(Offset.zero);
-      _childRect = position & size;
-    }
+    if (renderBox == null || !renderBox.hasSize) return;
+
+    final size = renderBox.size;
+    final position = renderBox.localToGlobal(Offset.zero);
+    _childRect = position & size;
 
     // Use center of child as the press position for positioning math
     _pressGlobalPosition = _childRect?.center ?? Offset.zero;
@@ -403,6 +410,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   void _openFromController() {
     if (_overlayEntry != null) return;
     if (!mounted) return;
+    if (_isAnyMenuOpen) return; // Another menu is already open
 
     if (widget._isButtonMode) {
       _openAsButton();
@@ -410,11 +418,11 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
       // For long-press variant opened via controller,
       // open in locked mode WITH child replica
       final renderBox = context.findRenderObject() as RenderBox?;
-      if (renderBox != null) {
-        final size = renderBox.size;
-        final position = renderBox.localToGlobal(Offset.zero);
-        _childRect = position & size;
-      }
+      if (renderBox == null || !renderBox.hasSize) return;
+
+      final size = renderBox.size;
+      final position = renderBox.localToGlobal(Offset.zero);
+      _childRect = position & size;
 
       _pressGlobalPosition = _childRect?.center ?? Offset.zero;
       _hoveredIndex = -1;

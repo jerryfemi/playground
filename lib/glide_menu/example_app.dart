@@ -15,6 +15,13 @@ class _DemoPageState extends State<DemoPage> {
   final Color _myBubbleColor = const Color(0xFF2B5278);
   final Color _theirBubbleColor = const Color(0xFF182533);
   final Color _textColor = const Color(0xFFE4E4E4);
+  final GlideMenuController controller = GlideMenuController();
+
+  @override
+  void dispose() {
+    controller.close();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -130,6 +137,7 @@ class _DemoPageState extends State<DemoPage> {
             icon: const Icon(Icons.phone_outlined, color: Colors.white70),
             onPressed: () {}),
         GlideMenu<String>.button(
+          controller: controller,
           backgroundColor: const Color(0xFF1E293B),
           textStyle: const TextStyle(color: Colors.white, fontSize: 16),
           margin: 16,
@@ -374,13 +382,16 @@ class _DemoPageState extends State<DemoPage> {
               ),
             ),
             const SizedBox(width: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: const BoxDecoration(
-                color: Colors.blueAccent,
-                shape: BoxShape.circle,
+            GestureDetector(
+              onTap: controller.open,
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: Colors.blueAccent,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.mic, color: Colors.white),
               ),
-              child: const Icon(Icons.mic, color: Colors.white),
             ),
           ],
         ),
