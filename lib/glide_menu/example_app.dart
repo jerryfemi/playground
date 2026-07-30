@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'src/glide_menu.dart';
 
 class DemoPage extends StatefulWidget {
@@ -88,21 +89,21 @@ class _DemoPageState extends State<DemoPage> {
               GlideMenuItem(
                   value: 'profile',
                   label: 'View Profile',
-                  icon: Icon(Icons.person_outline, color: Colors.white)),
+                  icon: Icon(CupertinoIcons.person, color: Colors.white)),
               GlideMenuItem(
                   value: 'mute',
                   label: 'Mute Notifications',
-                  icon: Icon(Icons.notifications_off_outlined,
+                  icon: Icon(CupertinoIcons.bell_slash,
                       color: Colors.white)),
               GlideMenuItem(
                   value: 'call',
                   label: 'Call',
-                  icon: Icon(Icons.call_outlined, color: Colors.greenAccent)),
+                  icon: Icon(CupertinoIcons.phone, color: Colors.greenAccent)),
             ],
             footer: const GlideMenuItem(
               value: 'block',
               label: 'Block User',
-              icon: Icon(Icons.block, color: Colors.redAccent),
+              icon: Icon(CupertinoIcons.nosign, color: Colors.redAccent),
               isDestructive: true,
             ),
             onSelected: (val) {
@@ -145,17 +146,17 @@ class _DemoPageState extends State<DemoPage> {
             GlideMenuItem(
                 value: 'search',
                 label: 'Search',
-                icon: Icon(Icons.search_rounded, color: Colors.white)),
+                icon: Icon(CupertinoIcons.search, color: Colors.white)),
             GlideMenuItem(
                 value: 'clear',
                 label: 'Clear History',
                 icon:
-                    Icon(Icons.cleaning_services_rounded, color: Colors.white)),
+                    Icon(CupertinoIcons.wand_stars, color: Colors.white)),
           ],
           footer: const GlideMenuItem(
             value: 'delete',
             label: 'Delete Chat',
-            icon: Icon(Icons.delete_outline, color: Colors.redAccent),
+            icon: Icon(CupertinoIcons.trash, color: Colors.redAccent),
             isDestructive: true,
           ),
           onSelected: (val) {
@@ -195,24 +196,24 @@ class _DemoPageState extends State<DemoPage> {
           GlideMenuItem(
               value: 'reply',
               label: 'Reply',
-              icon: Icon(Icons.reply_rounded, color: Colors.white)),
+              icon: Icon(CupertinoIcons.reply, color: Colors.white)),
           GlideMenuItem(
               value: 'copy',
               label: 'Copy Text',
-              icon: Icon(Icons.copy_rounded, color: Colors.white)),
+              icon: Icon(CupertinoIcons.doc_on_doc, color: Colors.white)),
           GlideMenuItem(
               value: 'forward',
               label: 'Forward',
-              icon: Icon(Icons.forward_rounded, color: Colors.white)),
+              icon: Icon(CupertinoIcons.share, color: Colors.white)),
           GlideMenuItem(
               value: 'pin',
               label: 'Pin',
-              icon: Icon(Icons.push_pin_outlined, color: Colors.white)),
+              icon: Icon(CupertinoIcons.pin, color: Colors.white)),
         ],
         footer: const GlideMenuItem(
           value: 'delete',
           label: 'Delete',
-          icon: Icon(Icons.delete_outline, color: Colors.redAccent),
+          icon: Icon(CupertinoIcons.trash, color: Colors.redAccent),
           isDestructive: true,
         ),
         onSelected: (val) {
@@ -249,24 +250,24 @@ class _DemoPageState extends State<DemoPage> {
           GlideMenuItem(
               value: 'reply',
               label: 'Reply',
-              icon: Icon(Icons.reply_rounded, color: Colors.white)),
+              icon: Icon(CupertinoIcons.reply, color: Colors.white)),
           GlideMenuItem(
               value: 'copy',
               label: 'Copy Text',
-              icon: Icon(Icons.copy_rounded, color: Colors.white)),
+              icon: Icon(CupertinoIcons.doc_on_doc, color: Colors.white)),
           GlideMenuItem(
               value: 'forward',
               label: 'Forward',
-              icon: Icon(Icons.forward_rounded, color: Colors.white)),
+              icon: Icon(CupertinoIcons.share, color: Colors.white)),
           GlideMenuItem(
               value: 'edit',
               label: 'Edit',
-              icon: Icon(Icons.edit_outlined, color: Colors.white)),
+              icon: Icon(CupertinoIcons.pencil, color: Colors.white)),
         ],
         footer: const GlideMenuItem(
           value: 'delete',
           label: 'Delete',
-          icon: Icon(Icons.delete_outline, color: Colors.redAccent),
+          icon: Icon(CupertinoIcons.trash, color: Colors.redAccent),
           isDestructive: true,
         ),
         onSelected: (val) {
@@ -304,13 +305,13 @@ class _DemoPageState extends State<DemoPage> {
           return GlideMenuItem(
             value: 'item_$index',
             label: 'Overflow Action ${index + 1}',
-            icon: const Icon(Icons.api_rounded, color: Colors.white54),
+            icon: const Icon(CupertinoIcons.cube_box, color: Colors.white54),
           );
         }),
         footer: const GlideMenuItem(
           value: 'delete',
           label: 'Delete All',
-          icon: Icon(Icons.delete_sweep_rounded, color: Colors.redAccent),
+          icon: Icon(CupertinoIcons.trash_fill, color: Colors.redAccent),
           isDestructive: true,
         ),
         onSelected: (val) {
