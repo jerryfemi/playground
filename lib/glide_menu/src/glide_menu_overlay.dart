@@ -342,8 +342,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
         Theme.of(context).colorScheme.primary.withValues(alpha: 0.08);
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 70),
-      curve: Curves.easeOut,
+      duration: const Duration(milliseconds: 100),
+      curve: Curves.fastOutSlowIn,
       height: widget.itemHeight,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
