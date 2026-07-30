@@ -10,6 +10,31 @@ export 'glide_menu_overlay.dart';
 export 'glide_menu_item.dart';
 export 'glide_hit_test.dart';
 
+/// Controller for programmatically opening and closing a [GlideMenu].
+///
+/// Works with both [GlideMenu] (long-press mode) and [GlideMenu.button]
+/// (tap mode). When [open] is called, the menu behaves as if the user
+/// triggered it via the configured gesture.
+class GlideMenuController {
+  _GlideMenuState? _state;
+
+  /// Whether the menu is currently visible.
+  bool get isOpen => _state?._overlayEntry != null;
+
+  /// Opens the menu programmatically.
+  void open() => _state?._openFromController();
+
+  /// Closes the menu programmatically.
+  void close() {
+    _state?._removeOverlay(
+      onClosed: () => _state?._reset(),
+    );
+  }
+
+  void _attach(_GlideMenuState state) => _state = state;
+  void _detach() => _state = null;
+}
+
 /// Continuous drag menu with spring-like interaction.
 ///
 /// Interaction flow:
@@ -21,6 +46,10 @@ export 'glide_hit_test.dart';
 ///
 /// This intentionally does NOT use `showMenu` or routes.
 class GlideMenu<T> extends StatefulWidget {
+  /// Creates a long-press context menu with child replica lift and scrub-to-select.
+  ///
+  /// This is the signature Telegram-style interaction: the user long-presses
+  /// the [child], it lifts onto the overlay, and they scrub to select an item.
   const GlideMenu({
     super.key,
     required this.child,
@@ -39,7 +68,37 @@ class GlideMenu<T> extends StatefulWidget {
     this.itemBorderRadius = 24,
     this.enableHaptics = true,
     this.initialIndex = 0,
-  }) : assert(items.length > 0 || footer != null,
+    this.controller,
+  }) : _isButtonMode = false,
+       assert(items.length > 0 || footer != null,
+            'GlideMenu requires at least one item or a footer.');
+
+  /// Creates a tap-to-open dropdown menu without child replica or scrub phase.
+  ///
+  /// The [child] stays in place, and the menu opens immediately in locked mode
+  /// (tap-to-select, scrollable). Ideal for icon buttons, action icons, or any
+  /// widget where a single tap should reveal a menu.
+  const GlideMenu.button({
+    super.key,
+    required this.child,
+    required this.items,
+    required this.onSelected,
+    this.footer,
+    this.itemHeight = 35,
+    this.menuWidth = 180,
+    this.margin = 12,
+    this.deadZone = 10,
+    this.anchorGap = 8,
+    this.highlightColor,
+    this.backgroundColor,
+    this.textStyle,
+    this.borderRadius = 24,
+    this.itemBorderRadius = 24,
+    this.enableHaptics = true,
+    this.initialIndex = 0,
+    this.controller,
+  }) : _isButtonMode = true,
+       assert(items.length > 0 || footer != null,
             'GlideMenu requires at least one item or a footer.');
 
   /// The widget that the user long-presses to open the menu.
@@ -90,6 +149,12 @@ class GlideMenu<T> extends StatefulWidget {
   /// Initial highlighted item when menu appears.
   final int initialIndex;
 
+  /// Optional controller for programmatic open/close.
+  final GlideMenuController? controller;
+
+  /// Whether this menu was created via [GlideMenu.button].
+  final bool _isButtonMode;
+
   @override
   State<GlideMenu<T>> createState() => _GlideMenuState<T>();
 }
@@ -103,6 +168,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   bool _isLockedOpen = false;
   bool _isClosing = false;
   bool _isPressedDown = false;
+  bool _showChildReplica = true;
   int _hoveredIndex = -1;
 
   MenuPosition? _initialPosition;
@@ -110,7 +176,23 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   Timer? _closeTimer;
 
   @override
+  void initState() {
+    super.initState();
+    widget.controller?._attach(this);
+  }
+
+  @override
+  void didUpdateWidget(GlideMenu<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controller != oldWidget.controller) {
+      oldWidget.controller?._detach();
+      widget.controller?._attach(this);
+    }
+  }
+
+  @override
   void dispose() {
+    widget.controller?._detach();
     _closeTimer?.cancel();
     // During dispose, skip the exit animation (nobody sees it)
     // and remove the overlay synchronously.
@@ -145,7 +227,8 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     _overlayEntry?.markNeedsBuild();
   }
 
-  void _showOverlay() {
+  void _showOverlay({bool showChildReplica = true}) {
+    _showChildReplica = showChildReplica;
     _overlayEntry = OverlayEntry(
       builder: (context) {
         return GlideMenuOverlay<T>(
@@ -164,6 +247,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
           itemBorderRadius: widget.itemBorderRadius,
           isLockedOpen: _isLockedOpen,
           isClosing: _isClosing,
+          showChildReplica: _showChildReplica,
           childReplica: widget.child,
           childRect: _childRect,
           onSelected: widget.onSelected,
@@ -179,7 +263,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     );
 
     Overlay.of(context, rootOverlay: true).insert(_overlayEntry!);
-    setState(() {}); // Hide original child
+    setState(() {}); // Trigger rebuild to update child visibility
   }
 
   void _handleLongPressStart(LongPressStartDetails details) {
@@ -282,14 +366,81 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   void _reset() {
     _hoveredIndex = -1;
     _isLockedOpen = false;
+    _showChildReplica = true;
     _pressGlobalPosition = Offset.zero;
     _childRect = null;
     _initialPosition = null;
     if (mounted) setState(() {});
   }
 
+  /// Opens the menu in button mode (tap-to-open, no child replica).
+  void _openAsButton() {
+    if (_overlayEntry != null) return; // Already open
+    if (!mounted) return;
+
+    // Capture child rect for positioning
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox != null) {
+      final size = renderBox.size;
+      final position = renderBox.localToGlobal(Offset.zero);
+      _childRect = position & size;
+    }
+
+    // Use center of child as the press position for positioning math
+    _pressGlobalPosition = _childRect?.center ?? Offset.zero;
+    _hoveredIndex = -1;
+    _isLockedOpen = true; // Skip scrub phase — go straight to locked
+
+    _showOverlay(showChildReplica: false);
+    _markNeedsBuild();
+
+    if (widget.enableHaptics) {
+      HapticFeedback.mediumImpact();
+    }
+  }
+
+  /// Opens the menu from the controller.
+  void _openFromController() {
+    if (_overlayEntry != null) return;
+    if (!mounted) return;
+
+    if (widget._isButtonMode) {
+      _openAsButton();
+    } else {
+      // For long-press variant opened via controller,
+      // open in locked mode WITH child replica
+      final renderBox = context.findRenderObject() as RenderBox?;
+      if (renderBox != null) {
+        final size = renderBox.size;
+        final position = renderBox.localToGlobal(Offset.zero);
+        _childRect = position & size;
+      }
+
+      _pressGlobalPosition = _childRect?.center ?? Offset.zero;
+      _hoveredIndex = -1;
+      _isLockedOpen = true;
+
+      _showOverlay(showChildReplica: true);
+      _markNeedsBuild();
+
+      if (widget.enableHaptics) {
+        HapticFeedback.mediumImpact();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Button mode: simple tap, no press animation, child stays visible
+    if (widget._isButtonMode) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _openAsButton,
+        child: widget.child,
+      );
+    }
+
+    // Long-press mode: press-down animation, child hides when overlay is up
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) => setState(() => _isPressedDown = true),
@@ -304,7 +455,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
         child: Opacity(
-          opacity: _overlayEntry != null ? 0.0 : 1.0,
+          opacity: (_overlayEntry != null && _showChildReplica) ? 0.0 : 1.0,
           child: widget.child,
         ),
       ),

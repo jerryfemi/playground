@@ -34,6 +34,7 @@ class GlideMenuOverlay<T> extends StatefulWidget {
     this.shadow,
     this.padding = const EdgeInsets.all(8),
     this.textStyle,
+    this.showChildReplica = true,
   });
 
   final Offset pressGlobalPosition;
@@ -58,6 +59,7 @@ class GlideMenuOverlay<T> extends StatefulWidget {
   final List<BoxShadow>? shadow;
   final EdgeInsets padding;
   final TextStyle? textStyle;
+  final bool showChildReplica;
 
   @override
   State<GlideMenuOverlay<T>> createState() => _GlideMenuOverlayState<T>();
@@ -173,14 +175,15 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
 
         return Stack(
           children: [
-            // Fixed Dimmed background (not hit testable)
-            Positioned.fill(
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 150),
-                opacity: _opacity,
-                child: Container(color: Colors.black26),
+            // Fixed Dimmed background (only in long-press mode)
+            if (widget.showChildReplica)
+              Positioned.fill(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: _opacity,
+                  child: Container(color: Colors.black26),
+                ),
               ),
-            ),
 
             // Scrolling content canvas
             Positioned.fill(
@@ -216,7 +219,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                           ),
 
                           // Child Replica (Lifting effect)
-                          if (widget.childReplica != null &&
+                          if (widget.showChildReplica &&
+                              widget.childReplica != null &&
                               widget.childRect != null)
                             Positioned(
                               left: widget.childRect!.left,

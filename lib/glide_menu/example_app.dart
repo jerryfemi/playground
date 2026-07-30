@@ -129,7 +129,7 @@ class _DemoPageState extends State<DemoPage> {
         IconButton(
             icon: const Icon(Icons.phone_outlined, color: Colors.white70),
             onPressed: () {}),
-        GlideMenu<String>(
+        GlideMenu<String>.button(
           backgroundColor: const Color(0xFF1E293B),
           textStyle: const TextStyle(color: Colors.white, fontSize: 16),
           margin: 16,
@@ -154,8 +154,8 @@ class _DemoPageState extends State<DemoPage> {
             ScaffoldMessenger.of(context)
                 .showSnackBar(SnackBar(content: Text('Selected: $val')));
           },
-          child: IconButton(
-              icon: const Icon(Icons.more_vert_rounded, color: Colors.white70),
+          child: const IconButton(
+              icon: Icon(Icons.more_vert_rounded, color: Colors.white70),
               onPressed: null),
         ),
       ],
