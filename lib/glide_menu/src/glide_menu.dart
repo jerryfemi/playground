@@ -244,7 +244,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     return GlideHitTest.indexFromGlobal(
       globalPosition: globalPos,
       menuLeft: _initialPosition!.left,
-      menuTop: _initialPosition!.top - _initialPosition!.pushUpAmount,
+      menuTop: _initialPosition!.top,
       menuWidth: widget.menuWidth,
       itemHeight: widget.itemHeight,
       itemCount: widget.items.length,

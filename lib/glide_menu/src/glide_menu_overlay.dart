@@ -122,6 +122,11 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
     }
   }
 
+  void _handleTapSelection(T value) {
+    widget.onSelected(value);
+    widget.onClose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final resolvedBackgroundColor =
@@ -288,29 +293,104 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                             ),
                                           ],
                                     ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
+                                    child: Stack(
                                       children: [
-                                        ...List.generate(widget.items.length,
-                                            (index) {
-                                          final item = widget.items[index];
-                                          final selected =
-                                              index == activeHoverIndex;
-                                          return _buildMenuItem(item, selected);
-                                        }),
-                                        if (widget.footer != null) ...[
-                                          const Divider(
-                                              height: 17,
-                                              indent: 6,
-                                              endIndent: 6),
-                                          _buildMenuItem(
-                                            widget.footer!,
-                                            activeHoverIndex ==
-                                                widget.items.length,
+                                        // 1. Sliding Highlight Box
+                                        AnimatedPositioned(
+                                          duration:
+                                              const Duration(milliseconds: 150),
+                                          curve: Curves.fastOutSlowIn,
+                                          left: 0,
+                                          right: 0,
+                                          height: widget.itemHeight,
+                                          top: activeHoverIndex ==
+                                                  widget.items.length
+                                              ? (activeHoverIndex *
+                                                      widget.itemHeight) +
+                                                  17
+                                              : (activeHoverIndex *
+                                                      widget.itemHeight)
+                                                  .clamp(0, double.infinity)
+                                                  .toDouble(),
+                                          child: AnimatedOpacity(
+                                            duration: const Duration(
+                                                milliseconds: 150),
+                                            opacity: activeHoverIndex == -1
+                                                ? 0.0
+                                                : 1.0,
+                                            child: AnimatedContainer(
+                                              duration: const Duration(
+                                                  milliseconds: 150),
+                                              decoration: BoxDecoration(
+                                                color: (activeHoverIndex >= 0 &&
+                                                            activeHoverIndex <
+                                                                widget.items
+                                                                    .length &&
+                                                            widget
+                                                                .items[
+                                                                    activeHoverIndex]
+                                                                .isDestructive) ||
+                                                        (activeHoverIndex ==
+                                                                widget.items
+                                                                    .length &&
+                                                            widget.footer
+                                                                    ?.isDestructive ==
+                                                                true)
+                                                    ? Colors.redAccent
+                                                        .withValues(alpha: 0.1)
+                                                    : (widget.highlightColor ??
+                                                        Theme.of(context)
+                                                            .colorScheme
+                                                            .primary
+                                                            .withValues(
+                                                                alpha: 0.08)),
+                                                borderRadius:
+                                                    BorderRadius.circular(widget
+                                                        .itemBorderRadius),
+                                              ),
+                                            ),
                                           ),
-                                        ],
+                                        ),
+                                        // 2. The Text Items
+                                        Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            ...List.generate(
+                                                widget.items.length, (index) {
+                                              final item = widget.items[index];
+                                              final selected =
+                                                  index == activeHoverIndex;
+                                              return GestureDetector(
+                                                behavior:
+                                                    HitTestBehavior.opaque,
+                                                onTapUp: (_) =>
+                                                    _handleTapSelection(
+                                                        item.value),
+                                                child: _buildMenuItem(
+                                                    item, selected),
+                                              );
+                                            }),
+                                            if (widget.footer != null) ...[
+                                              const Divider(
+                                                  height: 17,
+                                                  indent: 6,
+                                                  endIndent: 6),
+                                              GestureDetector(
+                                                behavior:
+                                                    HitTestBehavior.opaque,
+                                                onTapUp: (_) =>
+                                                    _handleTapSelection(
+                                                        widget.footer!.value),
+                                                child: _buildMenuItem(
+                                                    widget.footer!,
+                                                    activeHoverIndex ==
+                                                        widget.items.length),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -334,26 +414,12 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
   Widget _buildMenuItem(GlideMenuItem<T> item, bool selected) {
     final effectiveTextStyle =
         widget.textStyle ?? Theme.of(context).textTheme.bodyMedium;
-    final primaryColor = Theme.of(context).colorScheme.primary;
-    final color = item.isDestructive
-        ? Colors.redAccent
-        : (selected ? primaryColor : effectiveTextStyle?.color);
-    final resolvedHighlightColor = widget.highlightColor ??
-        Theme.of(context).colorScheme.primary.withValues(alpha: 0.08);
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 100),
-      curve: Curves.fastOutSlowIn,
+    final color =
+        item.isDestructive ? Colors.redAccent : effectiveTextStyle?.color;
+    return Container(
       height: widget.itemHeight,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: selected
-            ? (item.isDestructive
-                ? Colors.redAccent.withValues(alpha: 0.1)
-                : resolvedHighlightColor)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(widget.itemBorderRadius),
-      ),
+      color: Colors.transparent,
       child: item.child ??
           Row(
             children: [
@@ -370,7 +436,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: effectiveTextStyle?.copyWith(
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    fontWeight: FontWeight.w500,
                     color: color,
                   ),
                 ),
