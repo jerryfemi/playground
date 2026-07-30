@@ -13,6 +13,9 @@ A fluid, continuous drag-to-select context menu and spring button package for Fl
 
 - **Continuous Drag Selection**: Keep your finger on the screen to scrub through items.
 - **Spring Animations**: Powered by [Motor](https://pub.dev/packages/motor) for incredibly smooth, physics-based spring interactions.
+- **`GlideMenu.button()` Mode**: A dedicated tap-to-open dropdown constructor. Ideal for `⋮` more icons and toolbar actions. It opens instantly, skips the child lift effect, and floats on top of the UI without dimming the background.
+- **Programmatic Control**: Pass a `GlideMenuController` to open, close, and check the state of the menu from anywhere in the widget tree (great for keyboard shortcuts or custom buttons).
+- **Hybrid Scrolling**: Automatically handles menus that exceed the screen boundaries. Short menus snap open; massive menus gracefully fall back to a scrollable list, exactly like native OS menus..
 - **Destructive Actions**: Built-in support for a pinned `footer` with dangerous actions (like Delete) separated by a native divider.
 - **Fully Customizable**: Override default text/icons with a custom `child` widget. 
 - **Theme Integration**: Automatically inherits your app's `Theme.of(context).colorScheme` for seamless Light/Dark mode support.
@@ -41,7 +44,7 @@ import 'package:glide_menu/glide_menu.dart';
 
 ## Usage
 
-### 1. GlideMenu
+### 1. Classic Long-Press Context Menu (Telegram Style)
 
 Wrap any widget in a `GlideMenu` to give it a drag-to-select context menu.
 
@@ -75,6 +78,46 @@ GlideMenu<String>(
     color: Colors.blueAccent,
     child: const Text('Long press me!'),
   ),
+)
+```
+
+### 2. Tap-to-Open Dropdown Button
+
+For standard dropdown menus like an app bar `⋮` icon, use the `.button()` constructor. This skips the long-press squish animation and background dimming.
+
+```dart
+GlideMenu<String>.button(
+  items: const [
+    GlideMenuItem(value: 'settings', label: 'Settings', icon: Icon(Icons.settings)),
+  ],
+  onSelected: (value) => print('Selected: $value'),
+  child: const IconButton(
+    icon: Icon(Icons.more_vert),
+    onPressed: null, // Let GlideMenu handle the tap
+  ),
+)
+```
+
+### 3. Programmatic Controller
+
+Use a `GlideMenuController` to trigger the menu from external buttons or events.
+
+```dart
+final controller = GlideMenuController();
+
+// Wrap your target
+GlideMenu<String>(
+  controller: controller,
+  items: const [
+    GlideMenuItem(value: 'action', label: 'Action', icon: Icon(Icons.api)),
+  ],
+  child: const CircleAvatar(child: Text('JD')),
+)
+
+// Trigger it from anywhere
+ElevatedButton(
+  onTap: () => controller.open(),
+  child: const Text('Open Menu remotely!'),
 )
 ```
 
