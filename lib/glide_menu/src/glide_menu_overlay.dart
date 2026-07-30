@@ -105,7 +105,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
         _animationValue = 0.0;
       });
     }
-    if (widget.highlightedIndex != oldWidget.highlightedIndex && widget.highlightedIndex != -1) {
+    if (widget.highlightedIndex != oldWidget.highlightedIndex &&
+        widget.highlightedIndex != -1) {
       _visualHoverIndex = widget.highlightedIndex;
     }
   }
@@ -146,7 +147,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
     final activeHoverIndex =
         widget.isLockedOpen ? _localHoveredIndex : widget.highlightedIndex;
 
-    final mathIndex = activeHoverIndex == -1 ? _visualHoverIndex : activeHoverIndex;
+    final mathIndex =
+        activeHoverIndex == -1 ? _visualHoverIndex : activeHoverIndex;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -318,13 +320,11 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                           left: 0,
                                           right: 0,
                                           height: widget.itemHeight,
-                                          top: mathIndex ==
-                                                  widget.items.length
+                                          top: mathIndex == widget.items.length
                                               ? (mathIndex *
                                                       widget.itemHeight) +
                                                   17
-                                              : (mathIndex *
-                                                      widget.itemHeight)
+                                              : (mathIndex * widget.itemHeight)
                                                   .clamp(0, double.infinity)
                                                   .toDouble(),
                                           child: AnimatedOpacity(

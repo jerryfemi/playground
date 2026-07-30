@@ -152,6 +152,9 @@ class GlideMenu<T> extends StatefulWidget {
 class _GlideMenuState<T> extends State<GlideMenu<T>> {
   /// Global lock: only one GlideMenu can be open at a time across the entire app.
   static _GlideMenuState? _openMenuState;
+  
+  /// Small movement buffer before selection starts changing.
+  static const double _deadZone = 10.0;
 
   bool get _ownsLock => _openMenuState == this;
 
@@ -164,6 +167,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   bool _isClosing = false;
   bool _isPressedDown = false;
   bool _showChildReplica = true;
+  bool _hasPassedDeadZone = false;
   int _hoveredIndex = -1;
 
   MenuPosition? _initialPosition;
@@ -275,6 +279,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     _pressGlobalPosition = details.globalPosition;
     _hoveredIndex = -1; // Start unhovered until they drag into the menu bounds
     _isLockedOpen = false;
+    _hasPassedDeadZone = false;
 
     // Get exact screen coordinates of the child for the iOS lift effect.
     final renderBox = context.findRenderObject() as RenderBox?;
@@ -314,6 +319,13 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   void _handleLongPressMoveUpdate(LongPressMoveUpdateDetails details) {
     if (_overlayEntry == null) return;
     if (widget.items.isEmpty) return;
+
+    if (!_hasPassedDeadZone) {
+      if ((details.globalPosition - _pressGlobalPosition).distance < _deadZone) {
+        return;
+      }
+      _hasPassedDeadZone = true;
+    }
 
     final index = _getHoveredIndex(details.globalPosition);
 
@@ -370,6 +382,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     _hoveredIndex = -1;
     _isLockedOpen = false;
     _showChildReplica = true;
+    _hasPassedDeadZone = false;
 
     if (_ownsLock) {
       _openMenuState = null;
