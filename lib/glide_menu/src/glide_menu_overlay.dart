@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:meta/meta.dart';
@@ -163,13 +164,23 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
 
         return Stack(
           children: [
-            // Fixed Dimmed background (only in long-press mode)
+            // Fixed blurred background (only in long-press mode)
             if (widget.showChildReplica)
               Positioned.fill(
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 150),
-                  opacity: _opacity,
-                  child: Container(color: Colors.black26),
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(
+                      sigmaX: _opacity * 15.0,
+                      sigmaY: _opacity * 15.0,
+                    ),
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 150),
+                      opacity: _opacity,
+                      child: Container(
+                        color: Colors.black.withValues(alpha: _opacity * 0.3),
+                      ),
+                    ),
+                  ),
                 ),
               ),
 
