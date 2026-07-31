@@ -148,10 +148,11 @@ class GlideMenu<T> extends StatefulWidget {
   State<GlideMenu<T>> createState() => _GlideMenuState<T>();
 }
 
-class _GlideMenuState<T> extends State<GlideMenu<T>> with WidgetsBindingObserver {
+class _GlideMenuState<T> extends State<GlideMenu<T>>
+    with WidgetsBindingObserver {
   /// Global lock: only one GlideMenu can be open at a time across the entire app.
   static _GlideMenuState? _openMenuState;
-  
+
   /// Small movement buffer before selection starts changing.
   static const double _deadZone = 10.0;
 
@@ -327,7 +328,8 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> with WidgetsBindingObserver
     if (_openMenuState != null) return; // Another menu is already open
 
     _pressGlobalPosition = details.globalPosition;
-    _hoveredIndexNotifier.value = -1; // Start unhovered until they drag into the menu bounds
+    _hoveredIndexNotifier.value =
+        -1; // Start unhovered until they drag into the menu bounds
     _isLockedOpen = false;
     _hasPassedDeadZone = false;
 
@@ -371,7 +373,8 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> with WidgetsBindingObserver
     if (widget.items.isEmpty) return;
 
     if (!_hasPassedDeadZone) {
-      if ((details.globalPosition - _pressGlobalPosition).distance < _deadZone) {
+      if ((details.globalPosition - _pressGlobalPosition).distance <
+          _deadZone) {
         return;
       }
       _hasPassedDeadZone = true;
