@@ -148,7 +148,7 @@ class GlideMenu<T> extends StatefulWidget {
   State<GlideMenu<T>> createState() => _GlideMenuState<T>();
 }
 
-class _GlideMenuState<T> extends State<GlideMenu<T>> {
+class _GlideMenuState<T> extends State<GlideMenu<T>> with WidgetsBindingObserver {
   /// Global lock: only one GlideMenu can be open at a time across the entire app.
   static _GlideMenuState? _openMenuState;
   
@@ -176,6 +176,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     widget.controller?._attach(this);
   }
 
@@ -190,6 +191,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.controller?._detach();
     _closeTimer?.cancel();
     // During dispose, skip the exit animation (nobody sees it)
@@ -206,6 +208,52 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     }
 
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    if (_overlayEntry == null) return;
+    if (!_isLockedOpen && !_isClosing) {
+      _removeOverlay(onClosed: () {
+        if (mounted) _reset();
+      });
+      return;
+    }
+    if (_isLockedOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _reanchor());
+    }
+  }
+
+  void _reanchor() {
+    if (!mounted || _overlayEntry == null) return;
+
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.hasSize) return;
+
+    final size = renderBox.size;
+    final position = renderBox.localToGlobal(Offset.zero);
+    _childRect = position & size;
+    _pressGlobalPosition = _childRect!.center;
+
+    final media = MediaQuery.of(context);
+
+    _initialPosition = GlideHitTest.calculateMenuPosition(
+      screenSize: media.size,
+      safePadding: media.padding,
+      keyboardHeight: media.viewInsets.bottom,
+      childRect: _childRect,
+      pressGlobalPosition: _pressGlobalPosition,
+      menuWidth: widget.menuWidth,
+      menuHeight: GlideHitTest.menuHeight(
+        itemCount: widget.items.length,
+        itemHeight: widget.itemHeight,
+        hasFooter: widget.footer != null,
+      ),
+      margin: widget.margin,
+      anchorGap: widget.anchorGap,
+    );
+
+    _markNeedsBuild();
   }
 
   void _removeOverlay({VoidCallback? onClosed}) {
