@@ -6,7 +6,6 @@ import 'glide_menu_overlay.dart';
 import 'glide_menu_item.dart';
 import 'glide_hit_test.dart';
 
-export 'glide_menu_overlay.dart';
 export 'glide_menu_item.dart';
 export 'glide_hit_test.dart';
 
@@ -168,7 +167,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   bool _isPressedDown = false;
   bool _showChildReplica = true;
   bool _hasPassedDeadZone = false;
-  int _hoveredIndex = -1;
+  final ValueNotifier<int> _hoveredIndexNotifier = ValueNotifier<int>(-1);
 
   MenuPosition? _initialPosition;
 
@@ -197,6 +196,9 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     // and remove the overlay synchronously.
     _overlayEntry?.remove();
     _overlayEntry = null;
+
+    // Dispose notifier safely after overlay is removed
+    _hoveredIndexNotifier.dispose();
 
     // Release the global lock if we own it
     if (_ownsLock) {
@@ -245,7 +247,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
           itemHeight: widget.itemHeight,
           items: widget.items,
           footer: widget.footer,
-          highlightedIndex: _hoveredIndex,
+          hoveredIndexNotifier: _hoveredIndexNotifier,
           backgroundColor: widget.backgroundColor,
           highlightColor: widget.highlightColor,
           borderRadius: widget.borderRadius,
@@ -277,7 +279,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     if (_openMenuState != null) return; // Another menu is already open
 
     _pressGlobalPosition = details.globalPosition;
-    _hoveredIndex = -1; // Start unhovered until they drag into the menu bounds
+    _hoveredIndexNotifier.value = -1; // Start unhovered until they drag into the menu bounds
     _isLockedOpen = false;
     _hasPassedDeadZone = false;
 
@@ -329,12 +331,12 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
 
     final index = _getHoveredIndex(details.globalPosition);
 
-    if (index != _hoveredIndex) {
-      _hoveredIndex = index;
-      if (_hoveredIndex != -1 && widget.enableHaptics) {
+    if (index != _hoveredIndexNotifier.value) {
+      _hoveredIndexNotifier.value = index;
+      if (index != -1 && widget.enableHaptics) {
         HapticFeedback.selectionClick();
       }
-      _markNeedsBuild();
+      // No longer need to rebuild the entire tree here!
     }
   }
 
@@ -353,12 +355,13 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
 
   void _handleLongPressEnd(LongPressEndDetails details) {
     final totalItems = widget.items.length + (widget.footer != null ? 1 : 0);
-    if (_hoveredIndex >= 0 && _hoveredIndex < totalItems) {
+    final hoveredIndex = _hoveredIndexNotifier.value;
+    if (hoveredIndex >= 0 && hoveredIndex < totalItems) {
       // User dragged over an item and released. Execute it.
-      if (_hoveredIndex == widget.items.length && widget.footer != null) {
+      if (hoveredIndex == widget.items.length && widget.footer != null) {
         widget.onSelected(widget.footer!.value);
       } else {
-        widget.onSelected(widget.items[_hoveredIndex].value);
+        widget.onSelected(widget.items[hoveredIndex].value);
       }
       _removeOverlay(
         onClosed: () {
@@ -368,7 +371,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
     } else {
       // Didn't select anything via dragging, or just lifted finger. Lock it open!
       _isLockedOpen = true;
-      _hoveredIndex = -1; // Clear highlight so it looks neutral
+      _hoveredIndexNotifier.value = -1; // Clear highlight so it looks neutral
       _markNeedsBuild();
     }
   }
@@ -379,7 +382,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
   }
 
   void _reset() {
-    _hoveredIndex = -1;
+    _hoveredIndexNotifier.value = -1;
     _isLockedOpen = false;
     _showChildReplica = true;
     _hasPassedDeadZone = false;
@@ -410,7 +413,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
 
     // Use center of child as the press position for positioning math
     _pressGlobalPosition = _childRect?.center ?? Offset.zero;
-    _hoveredIndex = -1;
+    _hoveredIndexNotifier.value = -1;
     _isLockedOpen = true; // Skip scrub phase — go straight to locked
 
     _showOverlay(showChildReplica: false);
@@ -440,7 +443,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>> {
       _childRect = position & size;
 
       _pressGlobalPosition = _childRect?.center ?? Offset.zero;
-      _hoveredIndex = -1;
+      _hoveredIndexNotifier.value = -1;
       _isLockedOpen = true;
 
       _showOverlay(showChildReplica: true);

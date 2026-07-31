@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:meta/meta.dart';
 import 'package:motor/motor.dart';
 
 import 'glide_menu_item.dart';
@@ -10,6 +11,7 @@ import 'glide_hit_test.dart';
 /// Important:
 /// - [IgnorePointer] is used so the overlay does not steal the gesture.
 /// - The original [GestureDetector] continues receiving long-press updates.
+@internal
 class GlideMenuOverlay<T> extends StatefulWidget {
   const GlideMenuOverlay({
     super.key,
@@ -20,7 +22,7 @@ class GlideMenuOverlay<T> extends StatefulWidget {
     required this.itemHeight,
     required this.items,
     this.footer,
-    required this.highlightedIndex,
+    required this.hoveredIndexNotifier,
     required this.isLockedOpen,
     required this.isClosing,
     required this.onSelected,
@@ -44,7 +46,7 @@ class GlideMenuOverlay<T> extends StatefulWidget {
   final double itemHeight;
   final List<GlideMenuItem<T>> items;
   final GlideMenuItem<T>? footer;
-  final int highlightedIndex;
+  final ValueNotifier<int> hoveredIndexNotifier;
   final bool isLockedOpen;
   final bool isClosing;
   final ValueChanged<T> onSelected;
@@ -69,7 +71,6 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
   double _scale = 0.7;
   double _opacity = 0.0;
   double _animationValue = 0.0;
-  int _localHoveredIndex = -1;
   int _visualHoverIndex = 0;
   ScrollController? _scrollController;
 
@@ -105,10 +106,6 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
         _animationValue = 0.0;
       });
     }
-    if (widget.highlightedIndex != oldWidget.highlightedIndex &&
-        widget.highlightedIndex != -1) {
-      _visualHoverIndex = widget.highlightedIndex;
-    }
   }
 
   void _updateLocalHover(Offset localPosition) {
@@ -121,13 +118,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
       hasFooter: widget.footer != null,
     );
 
-    if (newIndex != _localHoveredIndex) {
-      setState(() {
-        _localHoveredIndex = newIndex;
-        if (newIndex != -1) {
-          _visualHoverIndex = newIndex;
-        }
-      });
+    if (newIndex != widget.hoveredIndexNotifier.value) {
+      widget.hoveredIndexNotifier.value = newIndex;
       if (newIndex != -1) {
         HapticFeedback.selectionClick();
       }
@@ -143,12 +135,6 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
   Widget build(BuildContext context) {
     final resolvedBackgroundColor =
         widget.backgroundColor ?? Theme.of(context).colorScheme.surface;
-
-    final activeHoverIndex =
-        widget.isLockedOpen ? _localHoveredIndex : widget.highlightedIndex;
-
-    final mathIndex =
-        activeHoverIndex == -1 ? _visualHoverIndex : activeHoverIndex;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -260,23 +246,24 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                               onPanEnd: (details) {
                                 final totalItems = widget.items.length +
                                     (widget.footer != null ? 1 : 0);
-                                if (_localHoveredIndex >= 0 &&
-                                    _localHoveredIndex < totalItems) {
-                                  if (_localHoveredIndex ==
+                                final localHoveredIndex = widget.hoveredIndexNotifier.value;
+                                if (localHoveredIndex >= 0 &&
+                                    localHoveredIndex < totalItems) {
+                                  if (localHoveredIndex ==
                                           widget.items.length &&
                                       widget.footer != null) {
                                     widget.onSelected(widget.footer!.value);
                                   } else {
                                     widget.onSelected(
-                                        widget.items[_localHoveredIndex].value);
+                                        widget.items[localHoveredIndex].value);
                                   }
                                   widget.onClose();
                                 } else {
-                                  setState(() => _localHoveredIndex = -1);
+                                  widget.hoveredIndexNotifier.value = -1;
                                 }
                               },
                               onPanCancel: () =>
-                                  setState(() => _localHoveredIndex = -1),
+                                  widget.hoveredIndexNotifier.value = -1,
                               child: SingleMotionBuilder(
                                 motion: const CupertinoMotion.bouncy(
                                     extraBounce: 0.1),
@@ -313,58 +300,68 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                     child: Stack(
                                       children: [
                                         // 1. Sliding Highlight Box
-                                        AnimatedPositioned(
-                                          duration:
-                                              const Duration(milliseconds: 150),
-                                          curve: Curves.fastOutSlowIn,
-                                          left: 0,
-                                          right: 0,
-                                          height: widget.itemHeight,
-                                          top: mathIndex == widget.items.length
-                                              ? (mathIndex *
-                                                      widget.itemHeight) +
-                                                  17
-                                              : (mathIndex * widget.itemHeight)
-                                                  .clamp(0, double.infinity)
-                                                  .toDouble(),
-                                          child: AnimatedOpacity(
-                                            duration: const Duration(
-                                                milliseconds: 150),
-                                            opacity: activeHoverIndex == -1
-                                                ? 0.0
-                                                : 1.0,
-                                            child: AnimatedContainer(
-                                              duration: const Duration(
-                                                  milliseconds: 150),
-                                              decoration: BoxDecoration(
-                                                color: (activeHoverIndex >= 0 &&
-                                                            activeHoverIndex <
-                                                                widget.items
-                                                                    .length &&
-                                                            widget
-                                                                .items[
-                                                                    activeHoverIndex]
-                                                                .isDestructive) ||
-                                                        (activeHoverIndex ==
-                                                                widget.items
-                                                                    .length &&
-                                                            widget.footer
-                                                                    ?.isDestructive ==
-                                                                true)
-                                                    ? Colors.redAccent
-                                                        .withValues(alpha: 0.1)
-                                                    : (widget.highlightColor ??
-                                                        Theme.of(context)
-                                                            .colorScheme
-                                                            .primary
-                                                            .withValues(
-                                                                alpha: 0.08)),
-                                                borderRadius:
-                                                    BorderRadius.circular(widget
-                                                        .itemBorderRadius),
+                                        ValueListenableBuilder<int>(
+                                          valueListenable: widget.hoveredIndexNotifier,
+                                          builder: (context, activeHoverIndex, child) {
+                                            if (activeHoverIndex != -1) {
+                                              _visualHoverIndex = activeHoverIndex;
+                                            }
+                                            final mathIndex = activeHoverIndex == -1 ? _visualHoverIndex : activeHoverIndex;
+
+                                            return AnimatedPositioned(
+                                              duration:
+                                                  const Duration(milliseconds: 150),
+                                              curve: Curves.fastOutSlowIn,
+                                              left: 0,
+                                              right: 0,
+                                              height: widget.itemHeight,
+                                              top: mathIndex == widget.items.length
+                                                  ? (mathIndex *
+                                                          widget.itemHeight) +
+                                                      17
+                                                  : (mathIndex * widget.itemHeight)
+                                                      .clamp(0, double.infinity)
+                                                      .toDouble(),
+                                              child: AnimatedOpacity(
+                                                duration: const Duration(
+                                                    milliseconds: 150),
+                                                opacity: activeHoverIndex == -1
+                                                    ? 0.0
+                                                    : 1.0,
+                                                child: AnimatedContainer(
+                                                  duration: const Duration(
+                                                      milliseconds: 150),
+                                                  decoration: BoxDecoration(
+                                                    color: (activeHoverIndex >= 0 &&
+                                                                activeHoverIndex <
+                                                                    widget.items
+                                                                        .length &&
+                                                                widget
+                                                                    .items[
+                                                                        activeHoverIndex]
+                                                                    .isDestructive) ||
+                                                            (activeHoverIndex ==
+                                                                    widget.items
+                                                                        .length &&
+                                                                widget.footer
+                                                                        ?.isDestructive ==
+                                                                    true)
+                                                        ? Colors.redAccent
+                                                            .withValues(alpha: 0.1)
+                                                        : (widget.highlightColor ??
+                                                            Theme.of(context)
+                                                                .colorScheme
+                                                                .primary
+                                                                .withValues(
+                                                                    alpha: 0.08)),
+                                                    borderRadius:
+                                                        BorderRadius.circular(widget
+                                                            .itemBorderRadius),
+                                                  ),
+                                                ),
                                               ),
-                                            ),
-                                          ),
+                                            );
+                                          },
                                         ),
                                         // 2. The Text Items
                                         Column(
@@ -375,16 +372,13 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                             ...List.generate(
                                                 widget.items.length, (index) {
                                               final item = widget.items[index];
-                                              final selected =
-                                                  index == activeHoverIndex;
                                               return GestureDetector(
                                                 behavior:
                                                     HitTestBehavior.opaque,
                                                 onTapUp: (_) =>
                                                     _handleTapSelection(
                                                         item.value),
-                                                child: _buildMenuItem(
-                                                    item, selected),
+                                                child: _buildMenuItem(item),
                                               );
                                             }),
                                             if (widget.footer != null) ...[
@@ -398,10 +392,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                                 onTapUp: (_) =>
                                                     _handleTapSelection(
                                                         widget.footer!.value),
-                                                child: _buildMenuItem(
-                                                    widget.footer!,
-                                                    activeHoverIndex ==
-                                                        widget.items.length),
+                                                child: _buildMenuItem(widget.footer!),
                                               ),
                                             ],
                                           ],
@@ -426,7 +417,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
     ); // Ends LayoutBuilder
   }
 
-  Widget _buildMenuItem(GlideMenuItem<T> item, bool selected) {
+  Widget _buildMenuItem(GlideMenuItem<T> item) {
     final effectiveTextStyle =
         widget.textStyle ?? Theme.of(context).textTheme.bodyMedium;
     final color =

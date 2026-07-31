@@ -93,8 +93,7 @@ class _DemoPageState extends State<DemoPage> {
               GlideMenuItem(
                   value: 'mute',
                   label: 'Mute Notifications',
-                  icon: Icon(CupertinoIcons.bell_slash,
-                      color: Colors.white)),
+                  icon: Icon(CupertinoIcons.bell_slash, color: Colors.white)),
               GlideMenuItem(
                   value: 'call',
                   label: 'Call',
@@ -150,8 +149,7 @@ class _DemoPageState extends State<DemoPage> {
             GlideMenuItem(
                 value: 'clear',
                 label: 'Clear History',
-                icon:
-                    Icon(CupertinoIcons.wand_stars, color: Colors.white)),
+                icon: Icon(CupertinoIcons.wand_stars, color: Colors.white)),
           ],
           footer: const GlideMenuItem(
             value: 'delete',
