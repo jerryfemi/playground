@@ -283,14 +283,15 @@ class _GlideMenuState<T> extends State<GlideMenu<T>>
     _overlayEntry?.markNeedsBuild();
   }
 
-  void _showOverlay({bool showChildReplica = true}) {
+  void _showOverlay({bool showChildReplica = true, double? anchorGapOverride}) {
     _showChildReplica = showChildReplica;
+    final effectiveGap = anchorGapOverride ?? widget.anchorGap;
     _overlayEntry = OverlayEntry(
       builder: (context) {
         return GlideMenuOverlay<T>(
           pressGlobalPosition: _pressGlobalPosition,
           margin: widget.margin,
-          anchorGap: widget.anchorGap,
+          anchorGap: effectiveGap,
           textStyle: widget.textStyle,
           width: widget.menuWidth,
           itemHeight: widget.itemHeight,
@@ -467,7 +468,7 @@ class _GlideMenuState<T> extends State<GlideMenu<T>>
     _hoveredIndexNotifier.value = -1;
     _isLockedOpen = true; // Skip scrub phase — go straight to locked
 
-    _showOverlay(showChildReplica: false);
+    _showOverlay(showChildReplica: false, anchorGapOverride: 0);
     _markNeedsBuild();
 
     if (widget.enableHaptics) {

@@ -162,6 +162,30 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
         _scrollController ??=
             ScrollController(initialScrollOffset: position.pushUpAmount);
 
+        // Compute scale origin: where the button's center falls within the menu
+        Alignment scaleAlignment;
+        if (!widget.showChildReplica && widget.childRect != null) {
+          // Button mode: scale from the button's position relative to the menu
+          final menuRect = Rect.fromLTWH(
+            position.left, position.top, widget.width, menuHeight,
+          );
+          final dx = ((widget.childRect!.center.dx - menuRect.left) /
+                      menuRect.width) *
+                  2.0 -
+              1.0;
+          final dy = ((widget.childRect!.center.dy - menuRect.top) /
+                      menuRect.height) *
+                  2.0 -
+              1.0;
+          scaleAlignment = Alignment(
+            dx.clamp(-1.0, 1.0),
+            dy.clamp(-1.0, 1.0),
+          );
+        } else {
+          // Long-press mode: keep existing top-center origin
+          scaleAlignment = Alignment.topCenter;
+        }
+
         return Stack(
           children: [
             // Fixed blurred background (only in long-press mode)
@@ -282,7 +306,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                 builder: (context, scale, child) {
                                   return Transform.scale(
                                     scale: scale,
-                                    alignment: Alignment.topCenter,
+                                    alignment: scaleAlignment,
                                     child: AnimatedOpacity(
                                       opacity: _opacity,
                                       duration:
