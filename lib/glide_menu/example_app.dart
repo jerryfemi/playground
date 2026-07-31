@@ -140,7 +140,7 @@ class _DemoPageState extends State<DemoPage> {
           controller: controller,
           backgroundColor: const Color(0xFF1E293B),
           textStyle: const TextStyle(color: Colors.white, fontSize: 16),
-          margin: 16,
+          borderRadius: 16,
           items: const [
             GlideMenuItem(
                 value: 'search',
