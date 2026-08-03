@@ -167,16 +167,19 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
         if (!widget.showChildReplica && widget.childRect != null) {
           // Button mode: scale from the button's position relative to the menu
           final menuRect = Rect.fromLTWH(
-            position.left, position.top, widget.width, menuHeight,
+            position.left,
+            position.top,
+            widget.width,
+            menuHeight,
           );
-          final dx = ((widget.childRect!.center.dx - menuRect.left) /
-                      menuRect.width) *
-                  2.0 -
-              1.0;
-          final dy = ((widget.childRect!.center.dy - menuRect.top) /
-                      menuRect.height) *
-                  2.0 -
-              1.0;
+          final dx =
+              ((widget.childRect!.center.dx - menuRect.left) / menuRect.width) *
+                      2.0 -
+                  1.0;
+          final dy =
+              ((widget.childRect!.center.dy - menuRect.top) / menuRect.height) *
+                      2.0 -
+                  1.0;
           scaleAlignment = Alignment(
             dx.clamp(-1.0, 1.0),
             dy.clamp(-1.0, 1.0),
@@ -221,7 +224,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                       motion: const CupertinoMotion.bouncy(extraBounce: 0.1),
                       value: _animationValue,
                       builder: (context, val, child) {
-                        // Animate from visually unshifted (shiftAmount) to shifted (0)
+                        // Only slide for button mode; long-press should scale in place to keep hit-box perfectly synced.
                         final translateY = position.pushUpAmount * (1.0 - val);
                         return Transform.translate(
                           offset: Offset(0, translateY),
@@ -281,7 +284,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                               onPanEnd: (details) {
                                 final totalItems = widget.items.length +
                                     (widget.footer != null ? 1 : 0);
-                                final localHoveredIndex = widget.hoveredIndexNotifier.value;
+                                final localHoveredIndex =
+                                    widget.hoveredIndexNotifier.value;
                                 if (localHoveredIndex >= 0 &&
                                     localHoveredIndex < totalItems) {
                                   if (localHoveredIndex ==
@@ -336,25 +340,33 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                       children: [
                                         // 1. Sliding Highlight Box
                                         ValueListenableBuilder<int>(
-                                          valueListenable: widget.hoveredIndexNotifier,
-                                          builder: (context, activeHoverIndex, child) {
+                                          valueListenable:
+                                              widget.hoveredIndexNotifier,
+                                          builder: (context, activeHoverIndex,
+                                              child) {
                                             if (activeHoverIndex != -1) {
-                                              _visualHoverIndex = activeHoverIndex;
+                                              _visualHoverIndex =
+                                                  activeHoverIndex;
                                             }
-                                            final mathIndex = activeHoverIndex == -1 ? _visualHoverIndex : activeHoverIndex;
+                                            final mathIndex =
+                                                activeHoverIndex == -1
+                                                    ? _visualHoverIndex
+                                                    : activeHoverIndex;
 
                                             return AnimatedPositioned(
-                                              duration:
-                                                  const Duration(milliseconds: 150),
+                                              duration: const Duration(
+                                                  milliseconds: 150),
                                               curve: Curves.fastOutSlowIn,
                                               left: 0,
                                               right: 0,
                                               height: widget.itemHeight,
-                                              top: mathIndex == widget.items.length
+                                              top: mathIndex ==
+                                                      widget.items.length
                                                   ? (mathIndex *
                                                           widget.itemHeight) +
                                                       17
-                                                  : (mathIndex * widget.itemHeight)
+                                                  : (mathIndex *
+                                                          widget.itemHeight)
                                                       .clamp(0, double.infinity)
                                                       .toDouble(),
                                               child: AnimatedOpacity(
@@ -367,7 +379,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                                   duration: const Duration(
                                                       milliseconds: 150),
                                                   decoration: BoxDecoration(
-                                                    color: (activeHoverIndex >= 0 &&
+                                                    color: (activeHoverIndex >=
+                                                                    0 &&
                                                                 activeHoverIndex <
                                                                     widget.items
                                                                         .length &&
@@ -382,15 +395,16 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                                                         ?.isDestructive ==
                                                                     true)
                                                         ? Colors.redAccent
-                                                            .withValues(alpha: 0.1)
+                                                            .withValues(
+                                                                alpha: 0.1)
                                                         : (widget.highlightColor ??
                                                             Theme.of(context)
                                                                 .colorScheme
                                                                 .primary
                                                                 .withValues(
                                                                     alpha: 0.08)),
-                                                    borderRadius:
-                                                        BorderRadius.circular(widget
+                                                    borderRadius: BorderRadius
+                                                        .circular(widget
                                                             .itemBorderRadius),
                                                   ),
                                                 ),
@@ -427,7 +441,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                                 onTapUp: (_) =>
                                                     _handleTapSelection(
                                                         widget.footer!.value),
-                                                child: _buildMenuItem(widget.footer!),
+                                                child: _buildMenuItem(
+                                                    widget.footer!),
                                               ),
                                             ],
                                           ],

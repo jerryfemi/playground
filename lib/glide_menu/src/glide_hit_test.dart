@@ -185,15 +185,15 @@ class GlideHitTest {
 
     if (actualBottom > maxAllowedBottom) {
       double requiredShift = actualBottom - maxAllowedBottom;
-      
+
       // Calculate how high we can push the child before it hits the top safe area
       double childTop = childRect?.top ?? pressGlobalPosition.dy;
       double maxPushUp = childTop - safePadding.top - margin;
-      
+
       if (maxPushUp < 0) maxPushUp = 0; // Don't push down
-      
+
       pushUpAmount = requiredShift > maxPushUp ? maxPushUp : requiredShift;
-      
+
       if (requiredShift > pushUpAmount) {
         // The menu still overflows after maximum push up, expand the scroll canvas!
         scrollHeight = screenHeight + (requiredShift - pushUpAmount);
@@ -201,8 +201,8 @@ class GlideHitTest {
     }
 
     return MenuPosition(
-      left: menuLeft, 
-      top: menuTop, 
+      left: menuLeft,
+      top: menuTop,
       pushUpAmount: pushUpAmount,
       scrollHeight: scrollHeight,
     );
