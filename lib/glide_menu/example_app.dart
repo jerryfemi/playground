@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'src/glide_menu.dart';
@@ -10,386 +11,244 @@ class DemoPage extends StatefulWidget {
 }
 
 class _DemoPageState extends State<DemoPage> {
-  // Theme colors matching premium dark chat apps
-  final Color _bgColor = const Color(0xFF0E1621);
-  final Color _appBarColor = const Color(0xFF17212B);
-  final Color _myBubbleColor = const Color(0xFF2B5278);
-  final Color _theirBubbleColor = const Color(0xFF182533);
-  final Color _textColor = const Color(0xFFE4E4E4);
-  final GlideMenuController controller = GlideMenuController();
+  // Classic iOS-style menu styling
+  final Color _menuBgColor = const Color(0xFF1E1E1E).withValues(alpha: 0.85);
+  final TextStyle _menuTextStyle =
+      const TextStyle(color: Colors.white, fontSize: 16);
 
-  @override
-  void dispose() {
-    controller.close();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Theme(
-      data: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: _bgColor,
-        appBarTheme: AppBarTheme(
-          backgroundColor: _appBarColor,
-          elevation: 2,
-        ),
-      ),
-      child: Scaffold(
-        appBar: _buildAppBar(),
-        body: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _buildDateHeader('Today'),
-                  const SizedBox(height: 16),
-                  _buildTheirBubble(
-                      'Hey! Did you finish the new GlideMenu physics?'),
-                  const SizedBox(height: 8),
-                  _buildMyBubble(
-                      'Yes! It has the iOS squish and the massive Telegram bounce now. Long-press this bubble to see the quick actions!'),
-                  const SizedBox(height: 8),
-                  _buildTheirBubble(
-                      'Whoa, that sounds awesome. What about the hybrid scroll? Does it work for insanely long menus?'),
-                  const SizedBox(height: 8),
-                  // The massive overflow list to showcase push up and hybrid scroll
-                  _buildOverflowBubble(),
-                  const SizedBox(height: 16),
-                  const Center(
-                    child: Text(
-                      'End of chat',
-                      style: TextStyle(color: Colors.white24, fontSize: 12),
-                    ),
-                  )
-                ],
-              ),
-            ),
-            _buildInputArea(),
-          ],
-        ),
+  void _showSnackbar(String text) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 1),
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      leading:
-          const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white70),
-      titleSpacing: 0,
-      title: Row(
-        children: [
-          // GlideMenu wrapping the avatar!
-          GlideMenu<String>(
-            backgroundColor: const Color(0xFF1E293B), // Deep slate
-            textStyle: const TextStyle(color: Colors.white, fontSize: 16),
-            menuWidth: 220,
-            margin: 16,
-            items: const [
-              GlideMenuItem(
-                  value: 'profile',
-                  label: 'View Profile',
-                  icon: Icon(CupertinoIcons.person, color: Colors.white)),
-              GlideMenuItem(
-                  value: 'mute',
-                  label: 'Mute Notifications',
-                  icon: Icon(CupertinoIcons.bell_slash, color: Colors.white)),
-              GlideMenuItem(
-                  value: 'call',
-                  label: 'Call',
-                  icon: Icon(CupertinoIcons.phone, color: Colors.greenAccent)),
-            ],
-            footer: const GlideMenuItem(
-              value: 'block',
-              label: 'Block User',
-              icon: Icon(CupertinoIcons.nosign, color: Colors.redAccent),
-              isDestructive: true,
-            ),
-            onSelected: (val) {
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text('Selected: $val')));
-            },
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.blueAccent.withValues(alpha: 0.2),
-              child: const Text('JD',
-                  style: TextStyle(
-                      color: Colors.blueAccent, fontWeight: FontWeight.bold)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Jane Doe',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: _textColor)),
-              const Text('online',
-                  style: TextStyle(fontSize: 12, color: Colors.blueAccent)),
-            ],
-          ),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBody: true,
+      extendBodyBehindAppBar: true,
+      body: CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(),
+          _buildPhotoGrid(),
+          const SliverPadding(
+              padding: EdgeInsets.only(bottom: 90)), // Spacer for bottom bar
         ],
       ),
+      bottomNavigationBar: _buildBottomBar(),
+    );
+  }
+
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      backgroundColor: Colors.black.withValues(alpha: 0.85),
+      surfaceTintColor: Colors.transparent,
+      pinned: true,
+      floating: false,
+      elevation: 0,
+      expandedHeight: 100,
+      flexibleSpace: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: const FlexibleSpaceBar(
+            titlePadding: EdgeInsets.only(left: 16, bottom: 12),
+            title: Text(
+              'Recents',
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 28,
+                  letterSpacing: -0.5,
+                  color: Colors.white),
+            ),
+          ),
+        ),
+      ),
+      leadingWidth: 100,
+      leading: CupertinoButton(
+        padding: EdgeInsets.zero,
+        child: const Row(
+          children: [
+            Icon(CupertinoIcons.back,
+                color: CupertinoColors.activeBlue, size: 28),
+            Text('Albums',
+                style:
+                    TextStyle(color: CupertinoColors.activeBlue, fontSize: 17)),
+          ],
+        ),
+        onPressed: () {},
+      ),
       actions: [
-        IconButton(
-            icon: const Icon(Icons.phone_outlined, color: Colors.white70),
-            onPressed: () {}),
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: CupertinoButton(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+            onPressed: () {},
+            minimumSize: Size(0, 0),
+            child: const Text('Select',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // THE BUTTON MODE MENU
         GlideMenu<String>.button(
-          controller: controller,
-          backgroundColor: const Color(0xFF1E293B),
-          textStyle: const TextStyle(color: Colors.white, fontSize: 16),
+          backgroundColor: _menuBgColor,
+          textStyle: _menuTextStyle,
+          margin: 16,
           items: const [
             GlideMenuItem(
-                value: 'search',
-                label: 'Search',
-                icon: Icon(CupertinoIcons.search, color: Colors.white)),
+                value: 'zoom_in',
+                label: 'Zoom In',
+                icon: Icon(CupertinoIcons.zoom_in, color: Colors.white)),
             GlideMenuItem(
-                value: 'clear',
-                label: 'Clear History',
-                icon: Icon(CupertinoIcons.wand_stars, color: Colors.white)),
+                value: 'zoom_out',
+                label: 'Zoom Out',
+                icon: Icon(CupertinoIcons.zoom_out, color: Colors.white)),
+            GlideMenuItem(
+                value: 'aspect',
+                label: 'Aspect Ratio Grid',
+                icon:
+                    Icon(CupertinoIcons.square_grid_2x2, color: Colors.white)),
           ],
           footer: const GlideMenuItem(
-            value: 'delete',
-            label: 'Delete Chat',
-            icon: Icon(CupertinoIcons.trash, color: Colors.redAccent),
-            isDestructive: true,
+              value: 'filter',
+              label: 'Filter',
+              icon: Icon(CupertinoIcons.slider_horizontal_3,
+                  color: Colors.white)),
+          onSelected: (val) => _showSnackbar('Action: $val'),
+          child: Container(
+            width: 32,
+            height: 32,
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.15),
+            ),
+            child: const Icon(CupertinoIcons.ellipsis,
+                color: Colors.white, size: 20),
           ),
-          onSelected: (val) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text('Selected: $val')));
-          },
-          child: const IconButton(
-              icon: Icon(Icons.more_vert_rounded, color: Colors.white70),
-              onPressed: null),
         ),
       ],
     );
   }
 
-  Widget _buildDateHeader(String text) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(text,
-            style: const TextStyle(fontSize: 12, color: Colors.white54)),
+  Widget _buildPhotoGrid() {
+    return SliverGrid(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 1.5,
+        crossAxisSpacing: 1.5,
       ),
-    );
-  }
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          // A mix of regular photos and some simulated videos
+          final isVideo = index % 7 == 0;
 
-  Widget _buildTheirBubble(String text) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: GlideMenu<String>(
-        backgroundColor: const Color(0xFF1E293B),
-        textStyle: const TextStyle(color: Colors.white, fontSize: 16),
-        margin: 16,
-        items: const [
-          GlideMenuItem(
-              value: 'reply',
-              label: 'Reply',
-              icon: Icon(CupertinoIcons.reply, color: Colors.white)),
-          GlideMenuItem(
-              value: 'copy',
-              label: 'Copy Text',
-              icon: Icon(CupertinoIcons.doc_on_doc, color: Colors.white)),
-          GlideMenuItem(
-              value: 'forward',
-              label: 'Forward',
-              icon: Icon(CupertinoIcons.share, color: Colors.white)),
-          GlideMenuItem(
-              value: 'pin',
-              label: 'Pin',
-              icon: Icon(CupertinoIcons.pin, color: Colors.white)),
-        ],
-        footer: const GlideMenuItem(
-          value: 'delete',
-          label: 'Delete',
-          icon: Icon(CupertinoIcons.trash, color: Colors.redAccent),
-          isDestructive: true,
-        ),
-        onSelected: (val) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('Selected: $val')));
-        },
-        child: Container(
-          constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.75),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: _theirBubbleColor,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-              bottomRight: Radius.circular(16),
-              bottomLeft: Radius.circular(4),
-            ),
-          ),
-          child: Text(text, style: TextStyle(color: _textColor, fontSize: 16)),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMyBubble(String text) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: GlideMenu<String>(
-        backgroundColor: const Color(0xFF1E293B),
-        textStyle: const TextStyle(color: Colors.white, fontSize: 16),
-        margin: 16,
-        items: const [
-          GlideMenuItem(
-              value: 'reply',
-              label: 'Reply',
-              icon: Icon(CupertinoIcons.reply, color: Colors.white)),
-          GlideMenuItem(
-              value: 'copy',
-              label: 'Copy Text',
-              icon: Icon(CupertinoIcons.doc_on_doc, color: Colors.white)),
-          GlideMenuItem(
-              value: 'forward',
-              label: 'Forward',
-              icon: Icon(CupertinoIcons.share, color: Colors.white)),
-          GlideMenuItem(
-              value: 'edit',
-              label: 'Edit',
-              icon: Icon(CupertinoIcons.pencil, color: Colors.white)),
-        ],
-        footer: const GlideMenuItem(
-          value: 'delete',
-          label: 'Delete',
-          icon: Icon(CupertinoIcons.trash, color: Colors.redAccent),
-          isDestructive: true,
-        ),
-        onSelected: (val) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('Selected: $val')));
-        },
-        child: Container(
-          constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.75),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: _myBubbleColor,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-              bottomLeft: Radius.circular(16),
-              bottomRight: Radius.circular(4),
-            ),
-          ),
-          child: Text(text, style: TextStyle(color: _textColor, fontSize: 16)),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOverflowBubble() {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: GlideMenu<String>(
-        menuWidth: 220,
-        backgroundColor: const Color(0xFF1E293B),
-        textStyle: const TextStyle(color: Colors.white, fontSize: 16),
-        margin: 16,
-        items: List.generate(15, (index) {
-          return GlideMenuItem(
-            value: 'item_$index',
-            label: 'Overflow Action ${index + 1}',
-            icon: const Icon(CupertinoIcons.cube_box, color: Colors.white54),
-          );
-        }),
-        footer: const GlideMenuItem(
-          value: 'delete',
-          label: 'Delete All',
-          icon: Icon(CupertinoIcons.trash_fill, color: Colors.redAccent),
-          isDestructive: true,
-        ),
-        onSelected: (val) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('Selected: $val')));
-        },
-        child: Container(
-          constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.75),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: _myBubbleColor,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-              bottomLeft: Radius.circular(16),
-              bottomRight: Radius.circular(4),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                  'Yes! Try long-pressing this specific bubble. It has 15 items in its menu.',
-                  style: TextStyle(color: _textColor, fontSize: 16)),
-              const SizedBox(height: 8),
-              Container(
-                height: 120,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.black26,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Center(
-                    child: Icon(Icons.touch_app_rounded,
-                        color: Colors.white54, size: 48)),
-              ),
+          return GlideMenu<String>(
+            backgroundColor: _menuBgColor,
+            textStyle: _menuTextStyle,
+            margin: 16,
+            items: const [
+              GlideMenuItem(
+                  value: 'copy',
+                  label: 'Copy',
+                  icon: Icon(CupertinoIcons.doc_on_clipboard,
+                      color: Colors.white)),
+              GlideMenuItem(
+                  value: 'share',
+                  label: 'Share',
+                  icon: Icon(CupertinoIcons.share, color: Colors.white)),
+              GlideMenuItem(
+                  value: 'favorite',
+                  label: 'Favorite',
+                  icon: Icon(CupertinoIcons.heart, color: Colors.white)),
+              GlideMenuItem(
+                  value: 'hide',
+                  label: 'Hide',
+                  icon: Icon(CupertinoIcons.eye_slash, color: Colors.white)),
             ],
-          ),
-        ),
+            footer: const GlideMenuItem(
+                value: 'delete',
+                label: 'Delete',
+                icon: Icon(CupertinoIcons.trash,
+                    color: CupertinoColors.destructiveRed),
+                isDestructive: true),
+            onSelected: (val) => _showSnackbar('Photo action: $val'),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.network(
+                  'https://picsum.photos/id/${index + 10}/300/300',
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                        color:
+                            const Color(0xFF1E1E1E)); // Dark gray placeholder
+                  },
+                ),
+                if (isVideo)
+                  const Positioned(
+                    bottom: 4,
+                    right: 4,
+                    child: Text(
+                      '0:30',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+        childCount: 60,
       ),
     );
   }
 
-  Widget _buildInputArea() {
-    return Container(
-      color: _appBarColor,
-      padding: EdgeInsets.only(
-          left: 12,
-          right: 12,
-          top: 8,
-          bottom: 8 + MediaQuery.of(context).padding.bottom),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            const Icon(Icons.attach_file_rounded, color: Colors.white54),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: _bgColor,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const Text('Message',
-                    style: TextStyle(color: Colors.white54, fontSize: 16)),
-              ),
+  Widget _buildBottomBar() {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: BottomNavigationBar(
+          backgroundColor: const Color(0xFF1E1E1E).withValues(alpha: 0.8),
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: CupertinoColors.activeBlue,
+          unselectedItemColor: Colors.grey,
+          currentIndex: 2,
+          selectedFontSize: 11,
+          unselectedFontSize: 11,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.photo),
+              label: 'Library',
             ),
-            const SizedBox(width: 12),
-            GestureDetector(
-              onTap: controller.open,
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  color: Colors.blueAccent,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.mic, color: Colors.white),
-              ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.heart_solid),
+              label: 'For You',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.rectangle_stack_fill),
+              label: 'Albums',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.search),
+              label: 'Search',
             ),
           ],
         ),
