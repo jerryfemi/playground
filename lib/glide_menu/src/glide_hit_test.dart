@@ -173,7 +173,7 @@ class GlideHitTest {
       );
     }
 
-    // Always attempt to spawn below the child.
+    // Always attempt to spawn below the child first.
     double menuTop = childBottom + anchorGap;
 
     // Calculate how much the menu overflows the bottom of the screen.

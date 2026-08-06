@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:meta/meta.dart';
@@ -134,8 +135,15 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
 
   @override
   Widget build(BuildContext context) {
+    final baseSurface = Theme.of(context).colorScheme.surface;
     final resolvedBackgroundColor =
-        widget.backgroundColor ?? Theme.of(context).colorScheme.surface;
+        widget.backgroundColor ?? baseSurface.withValues(alpha: 0.75);
+
+    // Smart highlight color: slightly lighter for dark backgrounds, slightly darker for light backgrounds
+    final resolvedHighlightColor = widget.highlightColor ??
+        (resolvedBackgroundColor.computeLuminance() > 0.5
+            ? Color.lerp(resolvedBackgroundColor, Colors.black, 0.1)!
+            : Color.lerp(resolvedBackgroundColor, Colors.white, 0.15)!);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -185,8 +193,24 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
             dy.clamp(-1.0, 1.0),
           );
         } else {
-          // Long-press mode: keep existing top-center origin
-          scaleAlignment = Alignment.topCenter;
+          // Long-press mode: dynamic anchor based on layout position
+          double dx = 0.0;
+          if (widget.childRect != null) {
+            final menuRect = Rect.fromLTWH(
+              position.left,
+              position.top,
+              widget.width,
+              menuHeight,
+            );
+            dx = ((widget.childRect!.center.dx - menuRect.left) /
+                        menuRect.width) *
+                    2.0 -
+                1.0;
+            dx = dx.clamp(-1.0, 1.0);
+          }
+
+          // Scale up from the top, preserving the dynamic horizontal center
+          scaleAlignment = Alignment(dx, -1.0);
         }
 
         return Stack(
@@ -224,7 +248,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                       motion: const CupertinoMotion.bouncy(extraBounce: 0.1),
                       value: _animationValue,
                       builder: (context, val, child) {
-                        // Only slide for button mode; long-press should scale in place to keep hit-box perfectly synced.
+                        // Animate from visually unshifted (shiftAmount) to shifted (0)
                         final translateY = position.pushUpAmount * (1.0 - val);
                         return Transform.translate(
                           offset: Offset(0, translateY),
@@ -240,6 +264,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                               behavior: HitTestBehavior.opaque,
                               onTap:
                                   widget.isLockedOpen ? widget.onClose : null,
+                              onVerticalDragStart: (_) => widget.onClose(),
+                              onHorizontalDragStart: (_) => widget.onClose(),
                               child: const SizedBox.expand(),
                             ),
                           ),
@@ -322,9 +348,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                 child: Material(
                                   color: Colors.transparent,
                                   child: Container(
-                                    padding: widget.padding,
                                     decoration: BoxDecoration(
-                                      color: resolvedBackgroundColor,
                                       borderRadius: BorderRadius.circular(
                                           widget.borderRadius),
                                       boxShadow: widget.shadow ??
@@ -336,7 +360,16 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                             ),
                                           ],
                                     ),
-                                    child: Stack(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(
+                                          widget.borderRadius),
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(
+                                            sigmaX: 25, sigmaY: 25),
+                                        child: Container(
+                                          padding: widget.padding,
+                                          color: resolvedBackgroundColor,
+                                          child: Stack(
                                       children: [
                                         // 1. Sliding Highlight Box
                                         ValueListenableBuilder<int>(
@@ -397,12 +430,7 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                                         ? Colors.redAccent
                                                             .withValues(
                                                                 alpha: 0.1)
-                                                        : (widget.highlightColor ??
-                                                            Theme.of(context)
-                                                                .colorScheme
-                                                                .primary
-                                                                .withValues(
-                                                                    alpha: 0.08)),
+                                                        : resolvedHighlightColor,
                                                     borderRadius: BorderRadius
                                                         .circular(widget
                                                             .itemBorderRadius),
@@ -432,6 +460,8 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                                             }),
                                             if (widget.footer != null) ...[
                                               const Divider(
+                                                  color:
+                                                      CupertinoColors.separator,
                                                   height: 17,
                                                   indent: 6,
                                                   endIndent: 6),
@@ -454,17 +484,20 @@ class _GlideMenuOverlayState<T> extends State<GlideMenuOverlay<T>> {
                               ),
                             ),
                           ),
-                        ], // Ends inner Stack children
-                      ), // Ends inner Stack
-                    ), // Ends SingleMotionBuilder
-                  ), // Ends SizedBox
-                ), // Ends SingleChildScrollView
-              ), // Ends IgnorePointer
-            ), // Ends Positioned.fill
-          ], // Ends outer Stack children
-        ); // Ends outer Stack
-      }, // Ends LayoutBuilder builder
-    ); // Ends LayoutBuilder
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+  },
+);
   }
 
   Widget _buildMenuItem(GlideMenuItem<T> item) {
